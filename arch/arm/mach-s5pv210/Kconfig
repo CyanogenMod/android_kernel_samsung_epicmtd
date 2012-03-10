@@ -230,6 +230,13 @@ config MACH_HERRING
 	help
 	  Machine support for Herring
 
+config MACH_VICTORY
+	bool "Victory"
+	Select CPU_S5PV210
+	Select S3C_DEV_WDT
+	help
+	  Machine support for Victory
+
 config S5PV210_SETUP_FB
 	bool
 	depends on FB_S3C

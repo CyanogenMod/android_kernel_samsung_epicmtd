@@ -36,6 +36,8 @@ obj-$(CONFIG_MACH_HERRING)	+= herring-touchkey-led.o
 
 obj-$(CONFIG_MACH_HERRING)	+= dev-herring-phone.o
 
+obj-$(CONFIG_MACH_VICTORY)	+= mach-victory.c
+
 # device support
 
 obj-y				+= dev-audio.o
