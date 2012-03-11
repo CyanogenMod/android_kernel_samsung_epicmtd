@@ -80,8 +80,10 @@ struct max8998_adc_table_data {
 	int temperature;
 };
 struct max8998_charger_callbacks {
-	void (*set_cable)(struct max8998_charger_callbacks *ptr,
-		enum cable_type_t status);
+	void (*set_cable)(struct max8998_charger_callbacks *ptr, enum cable_type_t status);
+	void (*set_jig)(struct max8998_charger_callbacks *ptr, bool attached);
+	bool (*set_esafe)(struct max8998_charger_callbacks *ptr, u8 esafe);
+	bool (*get_vdcin)(struct max8998_charger_callbacks *ptr);
 };
 
 /**
@@ -95,6 +97,32 @@ struct max8998_charger_data {
 	void (*register_callbacks)(struct max8998_charger_callbacks *ptr);
 	struct max8998_adc_table_data *adc_table;
 	int adc_array_size;
+	int termination_curr_adc;
+};
+/*
+  The S5PC110 Battery Tempreture blockage parameters
+*/
+struct s5p_batt_block_temp
+{
+	int temp_high_block;
+	int temp_high_recover;
+	int temp_low_block;
+	int temp_low_recover;
+	int temp_high_block_lpm;
+	int temp_high_recover_lpm;
+	int temp_low_block_lpm;
+	int temp_low_recover_lpm;
+	int temp_high_event_block;
+};
+/*
+ * ADC Channel 
+ */
+struct adc_channel_type {
+        int s3c_adc_voltage;
+        int s3c_adc_chg_current;
+        int s3c_adc_temperature;
+        int s3c_adc_v_f;
+        int s3c_adc_hw_version;
 };
 
 /**
@@ -141,6 +169,8 @@ struct max8998_platform_data {
 	bool				wakeup;
 	bool				rtc_delay;
 	struct max8998_charger_data	*charger;
+	struct adc_channel_type		*s3c_adc_channel;
+    struct s5p_batt_block_temp      *s5pc110_batt_block_temp;
 };
 
 #endif /*  __LINUX_MFD_MAX8998_H */
