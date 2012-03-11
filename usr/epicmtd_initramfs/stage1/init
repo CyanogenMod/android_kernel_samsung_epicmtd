@@ -1,0 +1,101 @@
+#!/stage1/busybox sh
+export _PATH="$PATH"
+export PATH=/stage1
+
+busybox cd /
+
+busybox mkdir -p /dev/block
+busybox mkdir -p /dev/mtd
+busybox mkdir -p /proc
+busybox mkdir -p /sys
+busybox mkdir -p /system
+busybox mknod -m 0666 /dev/block/mmcblk0 b 179 0
+busybox mknod -m 0666 /dev/block/mmcblk0p1 b 179 1
+busybox mknod -m 0666 /dev/mtd/mtd0     c 90 0
+busybox mknod -m 0666 /dev/mtd/mtd0ro   c 90 1
+busybox mknod -m 0666 /dev/mtd/mtd1     c 90 2
+busybox mknod -m 0666 /dev/mtd/mtd1ro   c 90 3
+busybox mknod -m 0666 /dev/mtd/mtd2     c 90 4
+busybox mknod -m 0666 /dev/mtd/mtd2ro   c 90 5
+busybox mknod -m 0666 /dev/mtd/mtd3     c 90 6
+busybox mknod -m 0666 /dev/mtd/mtd3ro   c 90 7
+busybox mknod -m 0666 /dev/mtd/mtd4     c 90 8
+busybox mknod -m 0666 /dev/mtd/mtd4ro   c 90 9
+busybox mknod -m 0666 /dev/mtd/mtd5     c 90 10
+busybox mknod -m 0666 /dev/mtd/mtd5ro   c 90 11
+busybox mknod -m 0666 /dev/block/mtdblock0 b 31 0
+busybox mknod -m 0666 /dev/block/mtdblock1 b 31 1
+busybox mknod -m 0666 /dev/block/mtdblock2 b 31 2
+busybox mknod -m 0666 /dev/block/mtdblock3 b 31 3
+busybox mknod -m 0666 /dev/block/mtdblock4 b 31 4
+busybox mknod -m 0666 /dev/block/mtdblock5 b 31 5
+busybox mknod -m 0666 /dev/mem     c 1 1
+
+busybox date >>boot.txt
+exec >>boot.txt 2>&1
+busybox rm init
+busybox mount -t proc proc /proc
+busybox mount -t sysfs sysfs /sys
+
+bml_over_mtd dump boot 72 reservoir 4012 /stage1/boot.bin
+
+eval $(busybox grep -m 1 -A 1 BOOT_IMAGE_OFFSETS /stage1/boot.bin | busybox tail -n 1)
+
+load_offset=$boot_offset
+load_len=$boot_len
+
+busybox mount -t yaffs2 /dev/block/mtdblock2 /system
+
+REC_BOOT_ADDR="0x57fff800"
+REC_BOOT_MAGIC="0x5EC0B007" # Must be in caps.
+
+if busybox test `busybox devmem "$REC_BOOT_ADDR" 32` = "$REC_BOOT_MAGIC" || busybox grep -q bootmode=2 /proc/cmdline ; then
+	# recovery boot
+	busybox devmem "$REC_BOOT_ADDR" 32 0x0
+	load_offset=$recovery_offset
+	load_len=$recovery_len
+
+	# disable lpm
+	busybox echo 0 > /sys/class/power_supply/battery/charging_mode_booting
+elif ! busybox test -e /system/build.prop ; then
+	# emergency boot
+        erase_image cache
+	busybox mkdir -p /cache
+        busybox mount -t yaffs2 /dev/block/mtdblock4 /cache
+        busybox mkdir /cache/recovery
+
+	busybox mkdir -p /sdcard
+	busybox mount -t vfat /dev/block/mmcblk0p1 /sdcard
+
+	UPDATE=$(busybox cat /sdcard/cyanogenmod.cfg)
+
+	if busybox test -e $UPDATE ; then
+		busybox echo "install_zip(\"`echo $UPDATE`\");" > /cache/recovery/extendedcommand
+  	fi
+
+	load_offset=$recovery_offset
+	load_len=$recovery_len
+
+	# disable lpm
+	busybox echo 0 > /sys/class/power_supply/battery/charging_mode_booting
+fi
+
+busybox umount /cache
+busybox umount /system
+busybox umount /sdcard
+busybox rmdir /sdcard
+
+busybox dd bs=512 if=/stage1/boot.bin skip=$load_offset count=$load_len | busybox zcat | busybox cpio -i
+
+if busybox grep -q 1 /sys/class/power_supply/battery/charging_mode_booting ; then
+	# low power mode
+	busybox rm victory.init.rc
+	busybox cp lpm.rc init.rc
+fi
+
+busybox umount /sys
+busybox umount /proc
+busybox date >>boot.txt
+busybox rm -fr /stage1 /dev/*
+export PATH="${_PATH}"
+exec /init
