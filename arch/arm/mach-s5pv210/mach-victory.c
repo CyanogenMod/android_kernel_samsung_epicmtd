@@ -2823,70 +2823,38 @@ static struct platform_device sec_device_jack = {
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
 static void victory_power_off(void)
 {
-	int err, i;
-	int mode = REBOOT_MODE_NONE;
-	char reset_mode = 'r';
 	int phone_wait_cnt = 0;
 
-	/* Change this API call just before power-off to take the dump. */
-	/* kernel_sec_clear_upload_magic_number(); */
-
-	err = gpio_request(GPIO_PHONE_ACTIVE, "GPIO_PHONE_ACTIVE");
-	/* will never be freed */
-	WARN(err, "failed to request GPIO_PHONE_ACTIVE");
-
-	gpio_direction_input(GPIO_nPOWER);
-	gpio_direction_input(GPIO_PHONE_ACTIVE);
-
-	/* prevent phone reset when AP off */
-	gpio_set_value(GPIO_PHONE_ON, 0);
-
-	for (i=1; i<=6; i++) { //from MAX8893_LDO1(1) to MAX8893_BUCK(6) To fix the leakage current issue in power off state
-		if(max8893_ldo_is_enabled_direct(i)){
-			max8893_ldo_disable_direct(i);
-		}
-	}
-
-	/* confirm phone off */
-	while (1) {
-		if (gpio_get_value(GPIO_PHONE_ACTIVE)) {
-			if (phone_wait_cnt > 10) {
-				printk(KERN_EMERG
-				       "%s: Try to Turn Phone Off by CP_RST\n",
-				       __func__);
+		/* confirm phone is powered-off  */
+		while (1) {
+			if (gpio_get_value(GPIO_PHONE_ACTIVE)) {
+				pr_info("%s: Try to Turn Phone Off by CP_RST\n",
+					__func__);
 				gpio_set_value(GPIO_CP_RST, 0);
-			}
-			if (phone_wait_cnt > 12) {
-				printk(KERN_EMERG "%s: PHONE OFF Failed\n",
-				       __func__);
+				if (phone_wait_cnt > 1) {
+					pr_info("%s: PHONE OFF Fail\n",
+					__func__);
+					break;
+				}
+				phone_wait_cnt++;
+				mdelay(100);
+			} else {
+				pr_info("%s: PHONE OFF Success\n", __func__);
 				break;
 			}
-			phone_wait_cnt++;
-			msleep(1000);
-		} else {
-			printk(KERN_EMERG "%s: PHONE OFF Success\n", __func__);
-			break;
 		}
-	}
 
 	while (1) {
 		/* Check reboot charging */
-		if (callbacks &&
-		    callbacks->get_vdcin &&
-		    callbacks->get_vdcin(callbacks)) {
+		if (set_cable_status) {
 			/* watchdog reset */
 			pr_info("%s: charger connected, rebooting\n", __func__);
-			mode = REBOOT_MODE_CHARGING;
-			if (sec_set_param_value)
-				sec_set_param_value(__REBOOT_MODE, &mode);
-			kernel_sec_clear_upload_magic_number();
-			kernel_sec_hw_reset(1);
+			writel(3, S5P_INFORM6);
 			arch_reset('r', NULL);
 			pr_crit("%s: waiting for reset!\n", __func__);
 			while (1);
 		}
 
-		kernel_sec_clear_upload_magic_number();
 		/* wait for power button release */
 		if (gpio_get_value(GPIO_nPOWER)) {
 			pr_info("%s: set PS_HOLD low\n", __func__);
