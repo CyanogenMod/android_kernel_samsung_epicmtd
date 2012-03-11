@@ -237,6 +237,8 @@ config MACH_VICTORY
 	select S3C_DEV_I2C1
 	select S3C_DEV_I2C2
 	select S5P_DEV_ONENAND
+	select HAVE_PWM
+	select SAMSUNG_DEV_PWM
 	select S5P_DEV_CSIS0
 	select S5P_SETUP_MIPIPHY
 	help
