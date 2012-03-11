@@ -234,6 +234,8 @@ config MACH_VICTORY
 	bool "Victory"
 	select CPU_S5PV210
 	select S3C_DEV_WDT
+	select S3C_DEV_I2C1
+	select S3C_DEV_I2C2
 	help
 	  Machine support for Victory
 
