@@ -81,6 +81,7 @@
 #include <plat/mfc.h>
 #include <plat/iic.h>
 #include <plat/pm.h>
+#include <plat/s5p-time.h>
 
 #include <plat/sdhci.h>
 #include <plat/fimc.h>
@@ -3293,6 +3294,9 @@ static void __init victory_map_io(void)
 	s3c24xx_init_clocks(24000000);
 	s5pv210_gpiolib_init();
 	s3c24xx_init_uarts(victory_uartcfgs, ARRAY_SIZE(victory_uartcfgs));
+#ifndef CONFIG_S5P_HIGH_RES_TIMERS
+	s5p_set_timer_source(S5P_PWM3, S5P_PWM4);
+#endif
 	s5p_reserve_bootmem(victory_media_devs, ARRAY_SIZE(victory_media_devs), S5P_RANGE_MFC);
 #ifdef CONFIG_MTD_ONENAND
 	s5p_device_onenand.name = "s5p-onenand";
@@ -3710,6 +3714,10 @@ MACHINE_START(VICTORY, "Victory")
 	.init_irq	= s5pv210_init_irq,
 	.map_io		= victory_map_io,
 	.init_machine	= victory_machine_init,
+#ifdef CONFIG_S5P_HIGH_RES_TIMERS
 	.timer		= &s5p_systimer,
+#else
+	.timer		= &s5p_timer,
+#endif
 MACHINE_END
 
