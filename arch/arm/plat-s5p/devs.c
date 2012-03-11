@@ -67,6 +67,27 @@ struct platform_device s5p_device_rtc = {
 	.resource         = s5p_rtc_resource,
 };
 
+/* Keypad interface */
+static struct resource s3c_keypad_resource[] = {
+	[0] = {
+		.start = S3C_PA_KEYPAD,
+		.end   = S3C_PA_KEYPAD + S3C_SZ_KEYPAD - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_KEYPAD,
+		.end   = IRQ_KEYPAD,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device s3c_device_keypad = {
+	.name             = "s3c-keypad",
+	.id               = -1,
+	.num_resources    = ARRAY_SIZE(s3c_keypad_resource),
+	.resource         = s3c_keypad_resource,
+};
+
 #ifdef CONFIG_S5P_ADC
 /* ADCTS */
 static struct resource s3c_adc_resource[] = {
