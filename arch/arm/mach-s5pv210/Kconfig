@@ -232,8 +232,8 @@ config MACH_HERRING
 
 config MACH_VICTORY
 	bool "Victory"
-	Select CPU_S5PV210
-	Select S3C_DEV_WDT
+	select CPU_S5PV210
+	select S3C_DEV_WDT
 	help
 	  Machine support for Victory
 
