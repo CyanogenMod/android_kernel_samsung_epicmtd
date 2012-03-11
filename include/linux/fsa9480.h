@@ -36,6 +36,19 @@ struct fsa9480_platform_data {
 	void (*deskdock_cb) (bool attached);
 	void (*cardock_cb) (bool attached);
 	void (*reset_cb) (void);
+	void (*set_init_flag) (void);
+	int spk_switch;
+	void (*wimax_cb) (bool attached);
 };
+
+enum {
+	SWITCH_PORT_AUTO = 0,
+	SWITCH_PORT_USB,
+	SWITCH_PORT_AUDIO,
+	SWITCH_PORT_UART,
+	SWITCH_PORT_VAUDIO
+};
+
+extern void fsa9480_manual_switching(int path);
 
 #endif /* _FSA9480_H_ */
