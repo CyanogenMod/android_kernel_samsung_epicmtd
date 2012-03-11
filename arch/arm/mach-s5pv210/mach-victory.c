@@ -3705,8 +3705,6 @@ EXPORT_SYMBOL(s3c_setup_uart_cfg_gpio);
 
 
 MACHINE_START(VICTORY, "Victory")
-	.phys_io	= S3C_PA_UART & 0xfff00000,
-	.io_pg_offst	= (((u32)S3C_VA_UART) >> 18) & 0xfffc,
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.fixup		= victory_fixup,
 	.init_irq	= s5pv210_init_irq,
