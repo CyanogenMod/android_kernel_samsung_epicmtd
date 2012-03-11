@@ -71,6 +71,16 @@ obj-$(CONFIG_VIDEO_SR030PC30)	+= sr030pc30.o
 obj-$(CONFIG_VIDEO_NOON010PC30)	+= noon010pc30.o
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 
+ifeq ($(CONFIG_MACH_VICTORY),y)
+TARGET_PRODUCT := SPH-D700
+endif
+
+ifeq ($(TARGET_PRODUCT),SPH-D700)
+obj-$(CONFIG_VIDEO_CE147) += ce147-victory.o
+else
+obj-$(CONFIG_VIDEO_CE147) += ce147.o
+endif
+
 obj-$(CONFIG_SOC_CAMERA_IMX074)		+= imx074.o
 obj-$(CONFIG_SOC_CAMERA_MT9M001)	+= mt9m001.o
 obj-$(CONFIG_SOC_CAMERA_MT9M111)	+= mt9m111.o
