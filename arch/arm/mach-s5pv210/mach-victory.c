@@ -3330,8 +3330,7 @@ static void __init victory_fixup(struct machine_desc *desc,
     ram_console_start = mi->bank[1].start + mi->bank[1].size;
 	ram_console_size = SZ_1M - SZ_4K;
 #endif
-	/* Leave 1K at 0x57fff000 for kexec hardboot page. */
-	pm_debug_scratchpad = ram_console_start + ram_console_size + SZ_1K;
+	pm_debug_scratchpad = ram_console_start + ram_console_size;
 }
 
 /* this function are used to detect s5pc110 chip version temporally */
