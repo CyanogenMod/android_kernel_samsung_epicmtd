@@ -907,14 +907,6 @@ static struct max8998_charger_data victory_charger = {
 	.termination_curr_adc	= 91,
 };
 
-static struct adc_channel_type s3c_adc_channel = {       
-        .s3c_adc_temperature = 1,
-        .s3c_adc_chg_current = 2,
-	.s3c_adc_v_f = 4,
-	.s3c_adc_hw_version = 7,
-	.s3c_adc_voltage = 8,
-};
-
 static struct max8998_platform_data max8998_pdata = {
 	.num_regulators = ARRAY_SIZE(victory_regulators),
 	.regulators     = victory_regulators,
@@ -931,7 +923,6 @@ static struct max8998_platform_data max8998_pdata = {
 	.buck2_set3	= GPIO_BUCK_2_EN,
 	.buck1_default_idx = 1,
 	.buck2_default_idx = 0,
-        .s3c_adc_channel        = &s3c_adc_channel,
 	.s5pc110_batt_block_temp  = &victory_batt_block_temp,
 };
 
