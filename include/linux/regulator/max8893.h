@@ -50,4 +50,14 @@ struct max8893_platform_data {
 	int num_subdevs;
 	struct max8893_subdev_data *subdevs;
 };
+
+int max8893_ldo_is_enabled_direct(int ldo);
+int max8893_ldo_disable_direct(int ldo);
+int max8893_ldo_enable_direct(int ldo);
+int max8893_onoff_disable_direct(int bit_position);
+int max8893_onoff_enable_direct(int bit_position);
+int max8893_onoff_set_direct(int value);
+int max8893_onoff_get_direct(void);
+int max8893_ldo_set_voltage_direct(int ldo, int min_uV, int max_uV);
+
 #endif
