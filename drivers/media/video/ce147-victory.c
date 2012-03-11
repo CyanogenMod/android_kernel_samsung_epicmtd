@@ -1931,7 +1931,7 @@ static int ce147_set_capture_size(struct v4l2_subdev *sd)
 		break;
 	default:
 		/* The framesize index was not set properly.
-		 * Check s_fmt call - it must be for video mode. */
+		 * Check s_mbus_fmt call - it must be for video mode. */
 		return -EINVAL;
 	}
 
@@ -4498,7 +4498,7 @@ static int ce147_s_crystal_freq(struct v4l2_subdev *sd, u32 freq, u32 flags)
 	return err;
 }
 
-static int ce147_g_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_g_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int err = 0;
 
@@ -4513,7 +4513,7 @@ static int ce147_set_framesize_index(struct v4l2_subdev *sd,
  * pixel_format -> to be handled in the	upper layer
  *
  * */
-static int ce147_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_s_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int err = 0;
 	struct ce147_state *state = to_state(sd);
@@ -4607,7 +4607,7 @@ static int ce147_enum_frameintervals(struct v4l2_subdev *sd,
 	return err;
 }
 
-static int ce147_enum_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmtdesc)
+static int ce147_enum_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmtdesc)
 {
 	int num_entries;
 
@@ -4622,7 +4622,7 @@ static int ce147_enum_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmtdesc)
 	return 0;
 }
 
-static int ce147_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_try_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int num_entries;
 	int i;
@@ -4696,7 +4696,7 @@ static int ce147_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 
 /* This	function is called from the g_ctrl api
  *
- * This	function should	be called only after the s_fmt call,
+ * This	function should	be called only after the s_mbus_fmt call,
  * which sets the required width/height value.
  *
  * It checks a list of available frame sizes and returns the
@@ -5547,12 +5547,12 @@ static const struct v4l2_subdev_core_ops ce147_core_ops = {
 
 static const struct v4l2_subdev_video_ops ce147_video_ops = {
 	.s_crystal_freq		= ce147_s_crystal_freq,
-	.g_fmt			= ce147_g_fmt,
-	.s_fmt			= ce147_s_fmt,
+	.g_mbus_fmt		= ce147_g_mbus_fmt,
+	.s_mbus_fmt		= ce147_s_mbus_fmt,
 	.enum_framesizes	= ce147_enum_framesizes,
 	.enum_frameintervals	= ce147_enum_frameintervals,
-	.enum_fmt		= ce147_enum_fmt,
-	.try_fmt		= ce147_try_fmt,
+	.enum_mbus_fmt		= ce147_enum_mbus_fmt,
+	.try_mbus_fmt		= ce147_try_mbus_fmt,
 	.g_parm			= ce147_g_parm,
 	.s_parm			= ce147_s_parm,
 };
