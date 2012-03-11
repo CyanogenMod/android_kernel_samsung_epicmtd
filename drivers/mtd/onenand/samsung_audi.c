@@ -4251,12 +4251,8 @@ void onenand_release(struct mtd_info *mtd)
 {
 	struct onenand_chip *this = mtd->priv;
 
-#ifdef CONFIG_MTD_PARTITIONS
 	/* Deregister partitions */
-	del_mtd_partitions (mtd);
-#endif
-	/* Deregister the device */
-	del_mtd_device (mtd);
+	mtd_device_unregister (mtd);
 
 	/* Free bad block table memory, if allocated */
 	if (this->bbm) {
@@ -4281,10 +4277,8 @@ static int __devinit s5p_onenand_probe(struct platform_device *dev)
 	//struct flash_platform_data *pdata = pdev->dev.platform_data;
 	struct resource *res;
 	int err;
-#ifdef CONFIG_MTD_PARTITIONS
 	struct mtd_partition *partitions = NULL;
 	int num_partitions = 0;
-#endif
 
 	info = kzalloc(sizeof(struct onenand_info), GFP_KERNEL);
 	if (!info)
@@ -4359,7 +4353,6 @@ static int __devinit s5p_onenand_probe(struct platform_device *dev)
 		goto out_iounmap2;
 	}
 
-#ifdef CONFIG_MTD_PARTITIONS
 #ifdef CONFIG_MTD_CMDLINE_PARTS
 	num_partitions = parse_mtd_partitions(&info->mtd, part_probes, &partitions, 0);
 #endif
@@ -4370,10 +4363,9 @@ static int __devinit s5p_onenand_probe(struct platform_device *dev)
 	}
 
 	if (partitions && num_partitions > 0)
-		err = add_mtd_partitions(&info->mtd, partitions, num_partitions);
+		err = mtd_device_register(&info->mtd, partitions, num_partitions);
 	else
-#endif
-		err = add_mtd_device(&info->mtd);
+		err = mtd_device_register(&info->mtd, NULL, 0);
 
 	if (err < 0)
 		goto out_release_onenand;
@@ -4437,10 +4429,7 @@ static int __devexit s5p_onenand_remove(struct platform_device *dev)
 	dev_set_drvdata(&pdev->dev, NULL);
 
 	if (info) {
-		if (info->parts)
-			del_mtd_partitions(&info->mtd);
-		else
-			del_mtd_device(&info->mtd);
+		mtd_device_unregister(&info->mtd);
 
 		onenand_release(&info->mtd);
 		release_mem_region(info->ctl_res->start, resource_size(info->ctl_res));

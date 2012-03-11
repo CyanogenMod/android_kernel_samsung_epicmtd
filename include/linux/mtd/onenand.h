@@ -141,6 +141,9 @@ struct onenand_chip {
 
 	void			*priv;
 
+	unsigned int	ecc_registers;
+	unsigned int	error_mask;
+
 	/*
 	 * Shows that the current operation is composed
 	 * of sequence of commands. For example, cache program.
@@ -175,6 +178,14 @@ struct onenand_chip {
 #define ONENAND_IS_MLC(this)						\
 	(this->technology & ONENAND_TECHNOLOGY_IS_MLC)
 
+#define ONENAND_IS_SINGLE_DATARAM(this)				\
+	(this->options & ONENAND_PAGE_EQUALS_DATARAM)
+
+#define ONENAND_NO_OOB_CMD                      ONENAND_IS_SINGLE_DATARAM
+
+#define OTP_LOCK_IN_MAIN(this)						\
+	(this->options & ONENAND_OTP_LOCK_OFFSET_IN_MAIN)
+
 #ifdef CONFIG_MTD_ONENAND_2X_PROGRAM
 #define ONENAND_IS_2PLANE(this)						\
 	(this->options & ONENAND_HAS_2PLANE)
@@ -195,6 +206,8 @@ struct onenand_chip {
 #define ONENAND_HAS_UNLOCK_ALL		(0x0002)
 #define ONENAND_HAS_2PLANE		(0x0004)
 #define ONENAND_HAS_4KB_PAGE		(0x0008)
+#define ONENAND_PAGE_EQUALS_DATARAM	(0x0008)
+#define ONENAND_OTP_LOCK_OFFSET_IN_MAIN	(0x0010)
 #define ONENAND_HAS_CACHE_PROGRAM	(0x0010)
 #define ONENAND_SKIP_UNLOCK_CHECK	(0x0100)
 #define ONENAND_PAGEBUF_ALLOC		(0x1000)
