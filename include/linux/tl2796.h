@@ -34,8 +34,15 @@ struct tl2796_color_adj {
 struct s5p_panel_data {
 	const u16 *seq_display_set;
 	const u16 *seq_etc_set;
+	const u16 *display_on;
+	const u16 *display_off;
 	const u16 *standby_on;
 	const u16 *standby_off;
+	const u16 **gamma19_table;
+	const u16 **gamma22_table;
+	const u16 *gamma_update;
+	const u16 **acl_table;
+	const u16 *acl_init;
 
 	int gpio_dcx;
 	int gpio_rdx;

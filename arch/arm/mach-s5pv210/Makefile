@@ -38,6 +38,7 @@ obj-$(CONFIG_MACH_HERRING)	+= dev-herring-phone.o
 
 obj-$(CONFIG_MACH_VICTORY)	+= mach-victory.o
 obj-$(CONFIG_MACH_VICTORY)	+= aries-btlpm.o
+obj-$(CONFIG_MACH_VICTORY)	+= aries-panel.o
 
 # device support
 
