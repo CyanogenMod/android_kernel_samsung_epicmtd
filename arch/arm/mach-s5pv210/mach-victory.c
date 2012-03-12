@@ -3418,7 +3418,9 @@ static void k3g_irq_init(void)
 static void __init victory_machine_init(void)
 {
 	setup_ram_console_mem();
-	s3c_usb_set_serial();
+/*
+ *	s3c_usb_set_serial();
+ */
 	platform_add_devices(victory_devices, ARRAY_SIZE(victory_devices));
         printk(KERN_EMERG "VICTORY The **************SYSTEM_REV********** is 0x%x\n",system_rev);
 	/* Find out S5PC110 chip version */
