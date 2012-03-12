@@ -661,8 +661,6 @@ static struct regulator_init_data victory_ldo11_data = {
 	.consumer_supplies	= ldo11_consumer,
 };
 
-
-
 static struct regulator_init_data victory_ldo12_data = {
 	.constraints	= {
 		.name		= "CAM_SENSOR_CORE_1.2V",
@@ -756,7 +754,6 @@ static struct regulator_init_data victory_buck1_data = {
 	.num_consumer_supplies	= ARRAY_SIZE(buck1_consumer),
 	.consumer_supplies	= buck1_consumer,
 };
-
 
 static struct regulator_init_data victory_buck2_data = {
 	.constraints	= {
@@ -1290,7 +1287,7 @@ static struct platform_device s3c_device_vibrator = {
                },
 };
 
-static  struct  i2c_gpio_platform_data victory_i2c4_platdata = {
+static struct i2c_gpio_platform_data victory_i2c4_platdata = {
 	.sda_pin		= GPIO_AP_SDA_18V,
 	.scl_pin		= GPIO_AP_SCL_18V,
 	.udelay			= 2,    /* 250KHz */
@@ -3161,7 +3158,6 @@ static struct platform_device watchdog_device = {
 	.id = -1,
 };
 
-
 static struct platform_device *victory_devices[] __initdata = {
 	&watchdog_device,
 #ifdef CONFIG_FIQ_DEBUGGER
@@ -3571,7 +3567,7 @@ static void __init victory_machine_init(void)
 	#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	/* soonyong.cho : This is for setting unique serial number */
         s3c_usb_set_serial();
-        #endif
+    #endif
 
 
 	if (gpio_is_valid(GPIO_MSENSE_nRST)) {
@@ -3657,6 +3653,19 @@ void usb_host_phy_off(void)
 EXPORT_SYMBOL(usb_host_phy_off);
 #endif
 
+MACHINE_START(VICTORY, "Victory")
+	.boot_params	= S5P_PA_SDRAM + 0x100,
+	.fixup		= victory_fixup,
+	.init_irq	= s5pv210_init_irq,
+	.map_io		= victory_map_io,
+	.init_machine	= victory_machine_init,
+#ifdef CONFIG_S5P_HIGH_RES_TIMERS
+	.timer		= &s5p_systimer,
+#else
+	.timer		= &s5p_timer,
+#endif
+MACHINE_END
+
 void s3c_setup_uart_cfg_gpio(unsigned char port)
 {
 	switch (port) {
@@ -3678,7 +3687,7 @@ void s3c_setup_uart_cfg_gpio(unsigned char port)
 		s3c_gpio_slp_cfgpin(GPIO_BT_RTS, S3C_GPIO_SLP_PREV);
 		s3c_gpio_slp_setpull_updown(GPIO_BT_RTS, S3C_GPIO_PULL_NONE);
 		break;
-	case 1: 
+	case 1:
 		s3c_gpio_cfgpin(GPIO_GPS_RXD, S3C_GPIO_SFN(GPIO_GPS_RXD_AF));
 		s3c_gpio_setpull(GPIO_GPS_RXD, S3C_GPIO_PULL_UP);
 		s3c_gpio_cfgpin(GPIO_GPS_TXD, S3C_GPIO_SFN(GPIO_GPS_TXD_AF));
@@ -3695,7 +3704,7 @@ void s3c_setup_uart_cfg_gpio(unsigned char port)
 		s3c_gpio_setpull(GPIO_AP_TXD, S3C_GPIO_PULL_NONE);
 		break;
 	case 3:
-                s3c_gpio_cfgpin(GPIO_FLM_RXD, S3C_GPIO_SFN(GPIO_FLM_RXD_AF));
+		s3c_gpio_cfgpin(GPIO_FLM_RXD, S3C_GPIO_SFN(GPIO_FLM_RXD_AF));
 		s3c_gpio_setpull(GPIO_FLM_RXD, S3C_GPIO_PULL_NONE);
 		s3c_gpio_cfgpin(GPIO_FLM_TXD, S3C_GPIO_SFN(GPIO_FLM_TXD_AF));
 		s3c_gpio_setpull(GPIO_FLM_TXD, S3C_GPIO_PULL_NONE);
@@ -3705,18 +3714,3 @@ void s3c_setup_uart_cfg_gpio(unsigned char port)
 	}
 }
 EXPORT_SYMBOL(s3c_setup_uart_cfg_gpio);
-
-
-MACHINE_START(VICTORY, "Victory")
-	.boot_params	= S5P_PA_SDRAM + 0x100,
-	.fixup		= victory_fixup,
-	.init_irq	= s5pv210_init_irq,
-	.map_io		= victory_map_io,
-	.init_machine	= victory_machine_init,
-#ifdef CONFIG_S5P_HIGH_RES_TIMERS
-	.timer		= &s5p_systimer,
-#else
-	.timer		= &s5p_timer,
-#endif
-MACHINE_END
-
