@@ -3455,7 +3455,7 @@ static void __init victory_machine_init(void)
  *	s3c_usb_set_serial();
  */
 	platform_add_devices(victory_devices, ARRAY_SIZE(victory_devices));
-        printk(KERN_EMERG "VICTORY The **************SYSTEM_REV********** is 0x%x\n",system_rev);
+        printk(KERN_EMERG "VICTORY 3.0 The **************SYSTEM_REV********** is 0x%x\n",system_rev);
 	/* Find out S5PC110 chip version */
 	_hw_version_check();
 
