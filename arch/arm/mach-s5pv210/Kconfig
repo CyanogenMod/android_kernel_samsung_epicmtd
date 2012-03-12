@@ -70,6 +70,22 @@ config S5PV210_POWER_DOMAIN
 	help
 	  Enable S5PV210 power domain support.
 
+choice
+        prompt "Select ARIES RAM SIZE"
+config DDR_RAM_3G
+        bool "Select DDR RAM 3G"
+        depends on ARCH_S5PV210
+        help
+                Select to support 3G bit RAM
+
+config DDR_RAM_2G
+        bool "select DDR RAM 2G"
+        depends on ARCH_S5PV210
+        help
+		Select to support 2G bit RAM
+
+endchoice
+
 config S5PV210_CORESIGHT
 	bool "Coresight"
 	select OC_ETM
