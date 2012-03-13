@@ -78,6 +78,17 @@ ENDPROC(__vet_atags)
  */
 	__INIT
 __mmap_switched:
+	/* 4. MMU enabled, draw dark green bar. */
+	movw	r3, #((0x4fc00000 + 150*480*4) &  0xffff)	@ frame buffer + offset
+	movt	r3, #((0x4fc00000 + 150*480*4) >> 16)
+	movw	r5, #(50*480*4 >> 5)	@ size
+	add	r5, r3, r5, lsl #5
+	movw	r6, #0x8000		@ color: 0xGGBB
+	movt	r6, #0x0000		@ color: 0x00RR
+1:	cmp	r3, r5
+	strlo	r6, [r3], #4
+	blo	1b
+
 	adr	r3, __mmap_switched_data
 
 	ldmia	r3!, {r4, r5, r6, r7}

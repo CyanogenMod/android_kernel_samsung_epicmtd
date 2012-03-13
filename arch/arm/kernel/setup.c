@@ -878,6 +878,13 @@ void __init setup_arch(char **cmdline_p)
 {
 	struct machine_desc *mdesc;
 
+	/* 6. In setup_arch, draw dark blue bar. */
+	{
+		uint32_t *offset = (uint32_t *)0x4fc00000 + 250*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00000080;
+	}
+
 	unwind_init();
 
 	setup_processor();
@@ -905,6 +912,14 @@ void __init setup_arch(char **cmdline_p)
 	arm_memblock_init(&meminfo, mdesc);
 
 	paging_init(mdesc);
+
+	/* 7. After paging_init, light dark magenta bar. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 300*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00800080;
+	}
+
 	request_standard_resources(mdesc);
 
 	unflatten_device_tree();

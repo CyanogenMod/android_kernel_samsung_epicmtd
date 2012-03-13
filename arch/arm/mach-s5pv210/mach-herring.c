@@ -5676,10 +5676,35 @@ static void herring_pm_restart(char mode, const char *cmd)
 
 static void __init herring_machine_init(void)
 {
+	/* 13. In victory_machine_init, draw light cyan bar. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 600*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x0000ffff;
+	}
+
 	arm_pm_restart = herring_pm_restart;
 
 	setup_ram_console_mem();
 	platform_add_devices(herring_devices, ARRAY_SIZE(herring_devices));
+
+	/* 15. After platform_add_devices, draw light magenta bar.
+	 * Note: ram_console is active at this point, subsequent printks will be
+	 * recorded in /proc/last_kmsg on reboot. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 700*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00ff00ff;
+	}
+
+	/* 16. After platform_add_devices, draw white bar.
+	 * Note: This is extra, feel free to move around wherever. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 750*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00ffffff;
+	}
+
 	if (!herring_is_tft_dev())
 		platform_device_register(&herring_i2c5_device);
 

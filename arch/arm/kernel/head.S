@@ -75,6 +75,18 @@
 ENTRY(stext)
 	setmode	PSR_F_BIT | PSR_I_BIT | SVC_MODE, r9 @ ensure svc mode
 						@ and irqs disabled
+
+	/* 2. In kernel entry, draw dark orange bar. */
+	movw	r3, #((0x4fc00000 +  50*480*4) &  0xffff)	@ frame buffer + offset
+	movt	r3, #((0x4fc00000 +  50*480*4) >> 16)
+	movw	r5, #(50*480*4 >> 5)	@ size
+	add	r5, r3, r5, lsl #5
+	movw	r6, #0x4000		@ color: 0xGGBB
+	movt	r6, #0x0080		@ color: 0x00RR
+1:	cmp	r3, r5
+	strlo	r6, [r3], #4
+	blo	1b
+
 	mrc	p15, 0, r9, c0, c0		@ get processor id
 	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid
 	movs	r10, r5				@ invalid processor (r5=0)?
@@ -102,6 +114,17 @@ ENTRY(stext)
 	bl	__fixup_pv_table
 #endif
 	bl	__create_page_tables
+
+	/* 3. Just prior to MMU enable, draw dark yellow bar. */
+	movw	r3, #((0x4fc00000 + 100*480*4) &  0xffff)	@ frame buffer + offset
+	movt	r3, #((0x4fc00000 + 100*480*4) >> 16)
+	movw	r5, #(50*480*4 >> 5)	@ size
+	add	r5, r3, r5, lsl #5
+	movw	r6, #0x8000		@ color: 0xGGBB
+	movt	r6, #0x0080		@ color: 0x00RR
+1:	cmp	r3, r5
+	strlo	r6, [r3], #4
+	blo	1b
 
 	/*
 	 * The following calls CPU specific code in a position independent
@@ -218,6 +241,14 @@ __create_page_tables:
 	add	r3, r4, r3, lsr #18
 	orr	r6, r7, r0
 	str	r6, [r3]
+
+	/* Direct map 2 MB for frame buffer at 0x4fc00000. */
+	movw	r3, #(0x4fc00000 >> 18)
+	add	r0, r4, r3
+	orr	r3, r7, r3, lsl #18
+	str	r3, [r0], #4
+	add	r3, r3, #0x00100000
+	str	r3, [r0]
 
 #ifdef CONFIG_DEBUG_LL
 #ifndef CONFIG_DEBUG_ICEDCC
