@@ -3450,12 +3450,38 @@ static void k3g_irq_init(void)
 
 static void __init victory_machine_init(void)
 {
+	/* 13. In victory_machine_init, draw light cyan bar. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 600*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x0000ffff;
+	}
+
+
 	setup_ram_console_mem();
 /*
  *	s3c_usb_set_serial();
  */
 	platform_add_devices(victory_devices, ARRAY_SIZE(victory_devices));
         printk(KERN_EMERG "VICTORY 3.0 The **************SYSTEM_REV********** is 0x%x\n",system_rev);
+
+	/* 15. After platform_add_devices, draw light magenta bar.
+	 * Note: ram_console is active at this point, subsequent printks will be
+	 * recorded in /proc/last_kmsg on reboot. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 700*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00ff00ff;
+	}
+
+	/* 16. After platform_add_devices, draw white bar.
+	 * Note: This is extra, feel free to move around wherever. */
+	{
+		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 750*480, *p;
+		for (p = offset; p < offset + 50*480; p++)
+			*p = 0x00ffffff;
+	}
+
 	/* Find out S5PC110 chip version */
 	_hw_version_check();
 
