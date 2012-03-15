@@ -168,6 +168,9 @@ struct input_keymap_entry {
 #define SYN_CONFIG		1
 #define SYN_MT_REPORT		2
 #define SYN_DROPPED		3
+#ifdef CONFIG_MACH_VICTORY
+#define _SUPPORT_MULTITOUCH_
+#endif
 
 /*
  * Keys and buttons

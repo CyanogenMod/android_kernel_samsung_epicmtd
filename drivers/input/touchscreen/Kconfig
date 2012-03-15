@@ -11,6 +11,27 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+config TOUCHSCREEN_QT602240
+        tristate "quantum touchscreen driver"
+        default N
+        help
+          Say Y here to enable the driver for the touchscreen on the
+          S3C spica board.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called melfas_ts.
+
+config QT602240_TOUCHKEY
+        bool "quantum touchscreen touchkey support"
+        default N
+        depends on TOUCHSCREEN_QT602240
+        help
+          Say Y here to enable the touch key with help of  touchscreen driver.
+
+          If unsure, say N.
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X
