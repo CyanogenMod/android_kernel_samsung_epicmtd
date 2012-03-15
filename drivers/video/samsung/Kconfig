@@ -144,6 +144,13 @@ config FB_S3C_MDNIE
 	---help---
 	  This enables support for Samsung MDNIE feature
 
+config FB_S3C_TL2796_ACL
+        bool "Samsung TL2796(ACL)"
+        depends on FB_S3C_TL2796
+        default y
+        ---help---
+          This enables support for Samsung TL2796 WVGA LCD panel to enable ACL feature.
+
 config FB_S3C_CMC623
 	bool "Samsung CMC623"
 	depends on FB_S3C && (ARCH_S5PV210)
