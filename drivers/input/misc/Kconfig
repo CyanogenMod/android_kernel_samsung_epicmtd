@@ -68,6 +68,48 @@ config INPUT_AD714X_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad714x-spi.
 
+config INPUT_BMA023
+	tristate "Bosch Sensortec BMA023 Acceleration Sensor"
+	depends on I2C
+
+config INPUT_BMA023_POSITION
+	int "BMA023 Mounting Position on Board"
+	depends on INPUT_BMA023
+	default "0"
+	help
+	  Chip mounting position (pin 1).
+	    0: top, upper-left
+	    1: top, upper-right
+	    2: top, lower-right
+	    3: top, lower-left
+	    4: bottom, upper-left
+	    5: bottom, upper-right
+	    6: bottom, lower-right
+	    7: bottom, lower-left
+
+config INPUT_YAS529
+	tristate "Yamaha YAS529 Geomagnetic Sensor"
+	depends on I2C
+
+config INPUT_YAS529_POSITION
+	int "YAS529 Mounting Position on Board"
+	depends on INPUT_YAS529
+	default "1"
+	help
+	  Chip mounting position (pin 1).
+	    0: top, upper-left
+	    1: top, upper-right
+	    2: top, lower-right
+	    3: top, lower-left
+	    4: bottom, upper-left
+	    5: bottom, upper-right
+	    6: bottom, lower-right
+	    7: bottom, lower-left
+
+config INPUT_ORIENTATION
+	tristate "Yamaha Orientation Sensor"
+	depends on I2C
+
 config INPUT_PCSPKR
 	tristate "PC Speaker support"
 	depends on PCSPKR_PLATFORM
