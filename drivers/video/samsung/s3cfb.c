@@ -50,6 +50,7 @@ struct s3c_platform_fb *to_fb_plat(struct device *dev)
 	return (struct s3c_platform_fb *)pdev->dev.platform_data;
 }
 
+char LCD_ON_OFF = 1;
 static unsigned int bootloaderfb;
 module_param_named(bootloaderfb, bootloaderfb, uint, 0444);
 MODULE_PARM_DESC(bootloaderfb, "Address of booting logo image in Bootloader");
@@ -1154,6 +1155,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 	clk_disable(fbdev->clock);
 #if defined(CONFIG_FB_S3C_TL2796)
 	lcd_cfg_gpio_early_suspend();
+	LCD_ON_OFF = 0;
 #endif
 	regulator_disable(fbdev->vlcd);
 	regulator_disable(fbdev->vcc_lcd);
@@ -1188,6 +1190,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 
 #if defined(CONFIG_FB_S3C_TL2796)
 	lcd_cfg_gpio_late_resume();
+	LCD_ON_OFF = 1;
 #endif
 	dev_dbg(fbdev->dev, "wake up from suspend\n");
 	if (pdata->cfg_gpio)
