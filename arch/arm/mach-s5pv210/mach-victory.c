@@ -1085,11 +1085,6 @@ static void panel_cfg_gpio(struct platform_device *pdev)
 #else
 	writel(0x2, S5P_MDNIE_SEL);
 #endif
-	/* drive strength to max */
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x12c);
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x14c);
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x16c);
-	writel(0x000000ff, S3C_ADDR(0x00500000) + 0x18c);
 
 	/* DISPLAY_CS */
 	s3c_gpio_cfgpin(S5PV210_MP01(1), S3C_GPIO_SFN(1));
