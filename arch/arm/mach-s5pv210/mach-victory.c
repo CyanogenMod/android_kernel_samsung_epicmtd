@@ -3285,7 +3285,7 @@ static void __init victory_map_io(void)
 #endif
 	s5p_reserve_bootmem(victory_media_devs, ARRAY_SIZE(victory_media_devs), S5P_RANGE_MFC);
 #ifdef CONFIG_MTD_ONENAND
-	s5p_device_onenand.name = "s5pc110-onenand";
+	s5p_device_onenand.name = "s5p-onenand";
 #endif
 }
 
