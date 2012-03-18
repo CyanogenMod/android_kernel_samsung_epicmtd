@@ -345,13 +345,6 @@ static int ram_console_driver_probe(struct platform_device *pdev)
 	const char *bootinfo = NULL;
 	struct ram_console_platform_data *pdata = pdev->dev.platform_data;
 
-	/* 14. In ram_console_driver_probe, draw light blue bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 650*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x000000ff;
-	}
-
 	if (res == NULL || pdev->num_resources != 1 ||
 	    !(res->flags & IORESOURCE_MEM)) {
 		printk(KERN_ERR "ram_console: invalid resource, %p %d flags "
@@ -384,14 +377,6 @@ static struct platform_driver ram_console_driver = {
 static int __init ram_console_module_init(void)
 {
 	int err;
-
-	/* 12. In ram_console_module_init, draw light green bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 550*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x0000ff00;
-	}
-
 	err = platform_driver_register(&ram_console_driver);
 	return err;
 }

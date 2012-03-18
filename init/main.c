@@ -348,13 +348,6 @@ static noinline void __init_refok rest_init(void)
 {
 	int pid;
 
-	/* 8. In rest_init, draw gray bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 350*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x00808080;
-	}
-
 	rcu_scheduler_starting();
 	/*
 	 * We need to spawn init first so that it obtains pid 1, however
@@ -464,13 +457,6 @@ asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern const struct kernel_param __start___param[], __stop___param[];
-
-	/* 5. In start_kernel, draw dark cyan bar. */
-	{
-		uint32_t *offset = (uint32_t *)0x4fc00000 + 200*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x00008080;
-	}
 
 	smp_setup_processor_id();
 
@@ -714,13 +700,6 @@ static void __init do_initcalls(void)
 {
 	initcall_t *fn;
 
-	/* 11. In do_initcalls, draw light yellow bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 500*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x00ffff00;
-	}
-
 	for (fn = __early_initcall_end; fn < __initcall_end; fn++)
 		do_one_initcall(*fn);
 }
@@ -734,13 +713,6 @@ static void __init do_initcalls(void)
  */
 static void __init do_basic_setup(void)
 {
-	/* 10. In do_basic_setup, draw light orange bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 450*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x00ff8000;
-	}
-
 	cpuset_init_smp();
 	usermodehelper_init();
 	init_tmpfs();
@@ -807,13 +779,6 @@ static noinline int init_post(void)
 
 static int __init kernel_init(void * unused)
 {
-	/* 9. In kernel_init, draw light red bar. */
-	{
-		uint32_t *offset = (uint32_t *)phys_to_virt(0x4fc00000) + 400*480, *p;
-		for (p = offset; p < offset + 50*480; p++)
-			*p = 0x00ff0000;
-	}
-
 	/*
 	 * Wait until kthreadd is all set-up.
 	 */

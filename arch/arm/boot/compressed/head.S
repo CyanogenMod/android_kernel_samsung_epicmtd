@@ -10,7 +10,6 @@
  */
 #include <linux/linkage.h>
 #include <asm/memory.h>
-#include <mach/map.h>
 
 /*
  * Debugging stuff
@@ -138,27 +137,6 @@ start:
 		teq	r0, #0			@ Check for kexec_boot_atags.
 		movne	r8, r0			@ Save kexec_boot_tags.
 		moveq	r8, r2			@ save atags pointer
-
-		/* Set watchdog to reboot in ~30s if aries-watchdog doesn't take over. */
-		ldr	r0, =S3C_PA_WDT
-		movw	r1, #0xff18		@ S3C2410_WTCON_DIV128 | S3C2410_WTCON_PRESCALE(255)
-		str	r1, [r0]
-		mov	r2, #(30 * 2048)
-		str	r2, [r0, #8]
-		str	r2, [r0, #4]
-		orr	r1, r1, #0x21		@ S3C2410_WTCON_RSTEN | S3C2410_WTCON_ENABLE
-		str	r1, [r0]
-
-		/* 1. In decompressor, draw dark red bar. */
-		movw	r0, #((0x4fc00000 +   0*480*4) &  0xffff)	@ frame buffer + offset
-		movt	r0, #((0x4fc00000 +   0*480*4) >> 16)
-		movw	r1, #(50*480*4 >> 5)	@ size
-		add	r1, r0, r1, lsl #5
-		movw	r2, #0x0000		@ color: 0xGGBB
-		movt	r2, #0x0080		@ color: 0x00RR
-1:		cmp	r0, r1
-		strlo	r2, [r0], #4
-		blo	1b
 
 #ifndef __ARM_ARCH_2__
 		/*
