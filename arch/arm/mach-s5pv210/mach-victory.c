@@ -492,7 +492,7 @@ static struct s5pv210_cpufreq_data smdkc110_cpufreq_plat = {
 #endif
 
 static struct regulator_consumer_supply ldo3_consumer[] = {
-	{	.supply	= "usb_io", },
+	REGULATOR_SUPPLY("pd_io", "s3c-usbgadget")
 };
 
 static struct regulator_consumer_supply ldo5_consumer[] = {
@@ -504,7 +504,7 @@ static struct regulator_consumer_supply ldo7_consumer[] = {
 };
 
 static struct regulator_consumer_supply ldo8_consumer[] = {
-	{	.supply = "usb_core", },
+	REGULATOR_SUPPLY("pd_core", "s3c-usbgadget")
 };
 
 static struct regulator_consumer_supply ldo11_consumer[] = {
