@@ -2799,6 +2799,28 @@ static struct sec_jack_zone sec_jack_zones[] = {
 	},
 };
 
+/* To support 3-buttons earjack */
+static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
+	{
+		/* 0 <= adc <=110, stable zone */
+		.code		= KEY_MEDIA,
+		.adc_low	= 0,
+		.adc_high	= 110,
+	},
+	{
+		/* 130 <= adc <= 365, stable zone */
+		.code		= KEY_PREVIOUSSONG,
+		.adc_low	= 130,
+		.adc_high	= 365,
+	},
+	{
+		/* 385 <= adc <= 870, stable zone */
+		.code		= KEY_NEXTSONG,
+		.adc_low	= 385,
+		.adc_high	= 870,
+	},
+};
+
 static int sec_jack_get_adc_value(void)
 {
 
@@ -2820,17 +2842,13 @@ static void set_popup_sw_enable(bool val)
 
 struct sec_jack_platform_data sec_jack_pdata = {
 	.set_micbias_state = sec_jack_set_micbias_state,
-	.set_popup_sw_state = set_popup_sw_enable,
 	.get_adc_value = sec_jack_get_adc_value,
 	.zones = sec_jack_zones,
 	.num_zones = ARRAY_SIZE(sec_jack_zones),
+	.buttons_zones = sec_jack_buttons_zones,
+	.num_buttons_zones = ARRAY_SIZE(sec_jack_buttons_zones),
 	.det_gpio = GPIO_DET_35,
-	.short_send_end_gpio = GPIO_EAR_SEND_END_SHORT,
-	.open_send_end_gpio = GPIO_3P_SEND_END,
-	.open_send_end_eintr = IRQ_EINT2,
-	.short_send_end_eintr = IRQ_EINT(30),
-	.det_active_high = 0,
-        .det_active_low = 0,
+	.send_end_gpio = GPIO_EAR_SEND_END,
 };
 
 static struct platform_device sec_device_jack = {
