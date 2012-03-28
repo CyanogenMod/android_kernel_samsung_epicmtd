@@ -305,4 +305,11 @@ config WIFI_CONTROL_FUNC
        bool "Enable WiFi control function abstraction"
        help
          Enables Power/Reset/Carddetect function abstraction
+
+config POKE_REC_BOOT_MAGIC
+	bool "Flag stage1 init to boot recovery on reboot(..., \"recovery\")"
+	help
+	  Poke REC_BOOT_MAGIC into REC_BOOT_ADDR on reboot(..., "recovery") to flag
+	  stage1 init to load the recovery image.
+
 endif
