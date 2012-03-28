@@ -38,6 +38,13 @@
 #include <linux/suspend.h>
 #endif
 #include "s3cfb.h"
+#ifdef CONFIG_FB_S3C_SPLASH_SCREEN
+#ifdef CONFIG_MACH_VICTORY
+#include "logo_rgb24_wvga_portrait.h"
+#include <mach/regs-clock.h>
+#define BOOT_FB_WINDOW	0
+#endif
+#endif
 
 #if (CONFIG_FB_S3C_NUM_OVLY_WIN >= CONFIG_FB_S3C_DEFAULT_WINDOW)
 #error "FB_S3C_NUM_OVLY_WIN should be less than FB_S3C_DEFAULT_WINDOW"
@@ -59,6 +66,12 @@ MODULE_PARM_DESC(bootloaderfb, "Address of booting logo image in Bootloader");
 static int s3cfb_draw_logo(struct fb_info *fb)
 {
 #ifdef CONFIG_FB_S3C_SPLASH_SCREEN
+#ifdef CONFIG_MACH_VICTORY
+    if (readl(S5P_INFORM5)) //LPM_CHARGING mode
+        memcpy(fb->screen_base, charging, fb->var.yres * fb->fix.line_length);
+    else
+        memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
+#else
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct fb_var_screeninfo *var = &fb->var;
 
@@ -95,7 +108,9 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 			fb->screen_base[offset++] = 0;
 		}
 	}
+#endif  /* CONFIG_MACH_VICTORY */
 #endif
+#ifndef CONFIG_MACH_VICTORY
 	if (bootloaderfb) {
 		u8 *logo_virt_buf;
 		logo_virt_buf = ioremap_nocache(bootloaderfb,
@@ -105,6 +120,7 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 				fb->var.yres * fb->fix.line_length);
 		iounmap(logo_virt_buf);
 	}
+#endif
 	return 0;
 }
 #endif
@@ -1018,6 +1034,14 @@ static int __devinit s3cfb_probe(struct platform_device *pdev)
 	}
 
 	s3cfb_set_clock(fbdev);
+
+#ifdef CONFIG_MACH_VICTORY
+	if (pdata->default_win != BOOT_FB_WINDOW)	{
+		dev_warn(fbdev->dev, "closing bootloader FIMD window 0\n", BOOT_FB_WINDOW);
+		s3cfb_set_window(fbdev, BOOT_FB_WINDOW, 0);
+	}
+#endif
+
 	s3cfb_set_window(fbdev, pdata->default_win, 1);
 
 	s3cfb_display_on(fbdev);
@@ -1035,8 +1059,10 @@ static int __devinit s3cfb_probe(struct platform_device *pdev)
 	if (pdata->backlight_on)
 		pdata->backlight_on(pdev);
 #endif
+#ifndef CONFIG_MACH_VICTORY
 	if (!bootloaderfb && pdata->reset_lcd)
 		pdata->reset_lcd(pdev);
+#endif
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
