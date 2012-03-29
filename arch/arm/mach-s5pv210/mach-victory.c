@@ -1101,10 +1101,10 @@ void lcd_cfg_gpio_early_suspend(void)
 		gpio_set_value(S5PV210_GPF3(i), 0);
 	}
 	/* drive strength to max */
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x12c);
+/*	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x12c);
 	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x14c);
 	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x16c);
-	writel(0x000000ff, S3C_ADDR(0x00500000) + 0x18c);
+	writel(0x000000ff, S3C_ADDR(0x00500000) + 0x18c); */
 
 	/* LCD_RST */
 	s3c_gpio_cfgpin(GPIO_MLCD_RST, S3C_GPIO_OUTPUT);
