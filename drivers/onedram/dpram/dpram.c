@@ -164,7 +164,7 @@ static int onedram_get_semaphore_for_init(const char *func);
 
 #define DRIVER_NAME 		"DPRAM"
 #define DRIVER_PROC_ENTRY	"driver/dpram"
-#define DRIVER_MAJOR_NUM	250 
+#define DRIVER_MAJOR_NUM	50 
 
 #ifdef _DEBUG
 #define _ENABLE_ERROR_DEVICE
@@ -2796,7 +2796,6 @@ static int register_dpram_driver(void)
 
 	/* @LDK@ register tty driver */
 	retval = tty_register_driver(dpram_tty_driver);
-
 	if (retval) {
 		dprintk(KERN_ERR "tty_register_driver error\n");
 		put_tty_driver(dpram_tty_driver);
@@ -3004,11 +3003,11 @@ static int get_minor_start_index(int id)
 	int start = 0;
 
 	switch (id) {
-		case 1:		start = 0;	break;
-		case 7:		start = 1;	break;
-		case 9:		start = 2;	break;
-		case 27:	start = 3;	break;
-		default:	start = 0;
+		case 1:		start = 8;	break;
+		case 7:		start = 9;	break;
+		case 9:		start = 10;	break;
+		case 27:	start = 11;	break;
+		default:	start = 8;
 	}
 
 	return start;
@@ -3236,7 +3235,6 @@ static void kill_tasklets(void)
 
 static int register_interrupt_handler(void)
 {
-
 	unsigned int dpram_irq, phone_active_irq;
 	int retval = 0;
 
@@ -3377,7 +3375,7 @@ static int __devinit dpram_probe(struct platform_device *dev)
 
     spin_lock_init(&mem_cpy_lock);
 	spin_lock_init(&mem_cmp_lock);
-	
+
 	return 0;
 }
 
