@@ -2023,7 +2023,7 @@ static int dpram_tty_write_room(struct tty_struct *tty)
 }
 
 
-static int dpram_tty_ioctl(struct tty_struct *tty, struct file *file,
+static int dpram_tty_ioctl(struct tty_struct *tty,
 		unsigned int cmd, unsigned long arg)
 {
 	unsigned int val;
