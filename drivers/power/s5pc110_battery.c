@@ -333,6 +333,11 @@ static int s3c_get_bat_temp(struct chg_data *chg)
 	int right_side = chg->pdata->adc_array_size - 1;
 	int mid;
 
+#ifdef CONFIG_MACH_VICTORY
+	temp_adc = (4096 - temp_adc) >> 4;
+#endif
+
+	/* Celcius mapping */
 	while (left_side <= right_side) {
 		mid = (left_side + right_side) / 2 ;
 		if (mid == 0 || mid == chg->pdata->adc_array_size - 1 ||

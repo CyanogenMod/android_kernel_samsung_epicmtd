@@ -32,6 +32,16 @@
 /*
  * ADC channel
  */
+#ifdef CONFIG_MACH_VICTORY
+enum adc_channel_type{
+        S3C_ADC_TEMPERATURE = 1,
+        S3C_ADC_CHG_CURRENT = 2,
+        S3C_ADC_V_F = 4,
+        S3C_ADC_HW_VERSION = 7,
+        S3C_ADC_VOLTAGE = 8,
+        ENDOFADC
+};
+#else
 enum adc_channel_type{
 	S3C_ADC_VOLTAGE = 0,
 	S3C_ADC_CHG_CURRENT = 2,
@@ -40,6 +50,7 @@ enum adc_channel_type{
 	S3C_ADC_V_F,
 	ENDOFADC
 };
+#endif
 
 enum {
 	BATT_VOL = 0,
