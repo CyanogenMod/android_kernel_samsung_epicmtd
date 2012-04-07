@@ -121,6 +121,12 @@ void s5pv210_setup_sdhci2_cfg_gpio(struct platform_device *dev, int width)
 	default:
 		printk(KERN_ERR "Wrong SD/MMC bus width : %d\n", width);
 	}
+
+	if (machine_is_victory()) {
+		s3c_gpio_cfgpin(S5PV210_GPG2(2), S3C_GPIO_OUTPUT);
+		s3c_gpio_setpull(S5PV210_GPG2(2), S3C_GPIO_PULL_NONE);
+		gpio_set_value(S5PV210_GPG2(2), 1);
+	}
 }
 
 void s5pv210_setup_sdhci3_cfg_gpio(struct platform_device *dev, int width)

@@ -89,6 +89,9 @@ void s5pv210_setup_sdhci_cfg_card(struct platform_device *dev,
 				ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_BASIC;
 			//else
 			//	ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_INVERT;
+		} else if (machine_is_victory()) {
+			ctrl3 = S3C_SDHCI_CTRL3_FCSELTX_BASIC;
+			ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_BASIC;
 		} else
 			ctrl3 = S3C_SDHCI_CTRL3_FCSELTX_BASIC |
 				S3C_SDHCI_CTRL3_FCSELRX_INVERT;
@@ -248,7 +251,17 @@ void s3c_sdhci_set_platdata(void)
 			universal_sdhci2_cfg_ext_cd();
 		}
 	}
-
+	if (machine_is_victory()) {
+		hsmmc2_platdata.cd_type = S3C_SDHCI_CD_GPIO;
+		hsmmc2_platdata.ext_cd_gpio = S5PV210_GPH1(0);
+		hsmmc2_platdata.ext_cd_gpio_invert = true;
+		s3c_gpio_cfgpin(S5PV210_GPH1(0), S3C_GPIO_SFN(0xf));
+		s3c_gpio_setpull(S5PV210_GPH1(0), S3C_GPIO_PULL_NONE);
+		if(system_rev >= 0x08)
+			irq_set_irq_type(IRQ_EINT8, IRQ_TYPE_EDGE_BOTH);
+		else
+			irq_set_irq_type(IRQ_EINT2, IRQ_TYPE_EDGE_BOTH);
+	}
 	s3c_sdhci2_set_platdata(&hsmmc2_platdata);
 #endif
 #if defined(CONFIG_S3C_DEV_HSMMC3)
