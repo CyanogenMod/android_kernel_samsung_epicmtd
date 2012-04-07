@@ -1005,6 +1005,10 @@ SYSCALL_DEFINE4(kexec_load, unsigned long, entry, unsigned long, nr_segments,
 
 		if (flags & KEXEC_PRESERVE_CONTEXT)
 			image->preserve_context = 1;
+#ifdef CONFIG_KEXEC_HARDBOOT
+		if (flags & KEXEC_HARDBOOT)
+			image->hardboot = 1;
+#endif
 		result = machine_kexec_prepare(image);
 		if (result)
 			goto out;
@@ -1537,7 +1541,15 @@ int kernel_kexec(void)
 	} else
 #endif
 	{
-		kernel_restart_prepare(NULL);
+#ifdef CONFIG_KEXEC_HARDBOOT
+		if (kexec_image->hardboot)
+			/* Reboot with the recovery kernel since the boot kernel decompressor may
+			 * not support the hardboot jump. */
+			kernel_restart_prepare("recovery");
+		else
+#endif
+			kernel_restart_prepare(NULL);
+
 		printk(KERN_EMERG "Starting new kernel\n");
 		machine_shutdown();
 	}
