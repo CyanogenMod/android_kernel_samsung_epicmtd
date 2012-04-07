@@ -91,7 +91,7 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_SPK,
 		.reg  = WM8994_SPEAKER_VOLUME_LEFT,	/* 26h */
 		.mask = WM8994_SPKOUTL_VOL_MASK,
-		.gain = WM8994_SPKOUT_VU | 0x3E     /* +5dB */
+		.gain = WM8994_SPKOUT_VU | 0x3F		/* +6dB */
 	}, {
 		.mode = PLAYBACK_SPK,
 		.reg  = WM8994_SPEAKER_VOLUME_RIGHT,	/* 27h */
@@ -101,17 +101,17 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_SPK,
 		.reg  = WM8994_CLASSD,			/* 25h */
 		.mask = WM8994_SPKOUTL_BOOST_MASK,
-		.gain = 0x05 << WM8994_SPKOUTL_BOOST_SHIFT  /* +7.5dB */
+		.gain = 0x6 << WM8994_SPKOUTL_BOOST_SHIFT	/* +9.0dB */
 	}, {
 		.mode = PLAYBACK_SPK,
 		.reg  = WM8994_AIF1_DAC1_LEFT_VOLUME,	/* 402h */
 		.mask = WM8994_AIF1DAC1L_VOL_MASK,
-		.gain = WM8994_AIF1DAC1_VU | 0xB8           /* -2.625dB */
+		.gain = WM8994_AIF1DAC1_VU | 0xC0	/* 0dB */
 	}, {
 		.mode = PLAYBACK_SPK,
 		.reg  = WM8994_AIF1_DAC1_RIGHT_VOLUME,	/* 403h */
 		.mask = WM8994_AIF1DAC1R_VOL_MASK,
-		.gain = WM8994_AIF1DAC1_VU | 0xB8           /* -2.625dB */
+		.gain = WM8994_AIF1DAC1_VU | 0xC0	/* 0dB */
 	}, { /* HP */
 		.mode = PLAYBACK_HP,
 		.reg  = WM8994_LEFT_OUTPUT_VOLUME,	/* 1Ch */
@@ -146,7 +146,7 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_SPK_HP,
 		.reg  = WM8994_SPEAKER_VOLUME_LEFT,	/* 26h */
 		.mask = WM8994_SPKOUTL_VOL_MASK,
-		.gain = WM8994_SPKOUT_VU | 0x3E
+		.gain = WM8994_SPKOUT_VU | 0x3F		/* +6dB */
 	}, {
 		.mode = PLAYBACK_SPK_HP,
 		.reg  = WM8994_SPEAKER_VOLUME_RIGHT,	/* 27h */
@@ -156,7 +156,7 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_SPK_HP,
 		.reg  = WM8994_CLASSD,			/* 25h */
 		.mask = WM8994_SPKOUTL_BOOST_MASK,
-		.gain = 0x5 << WM8994_SPKOUTL_BOOST_SHIFT
+		.gain = 0x6 << WM8994_SPKOUTL_BOOST_SHIFT	/* +9.0dB */
 	}, {
 		.mode = PLAYBACK_SPK_HP,
 		.reg  = WM8994_LEFT_OUTPUT_VOLUME,	/* 1Ch */
@@ -181,12 +181,12 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_RING_SPK,
 		.reg  = WM8994_SPEAKER_VOLUME_LEFT,	/* 26h */
 		.mask = WM8994_SPKOUTL_VOL_MASK,
-		.gain = WM8994_SPKOUT_VU | 0x3E
+		.gain = WM8994_SPKOUT_VU | 0x3F		/* +6dB */
 	}, {
 		.mode = PLAYBACK_RING_SPK,
 		.reg  = WM8994_CLASSD,			/* 25h */
 		.mask = WM8994_SPKOUTL_BOOST_MASK,
-		.gain = 0x5 << WM8994_SPKOUTL_BOOST_SHIFT
+		.gain = 0x6 << WM8994_SPKOUTL_BOOST_SHIFT	/* +9.0dB */
 	}, { /* RING_HP */
 		.mode = PLAYBACK_RING_HP,
 		.reg  = WM8994_LEFT_OUTPUT_VOLUME,	/* 1Ch */
@@ -211,12 +211,12 @@ struct gain_info_t cdma_playback_gain_table[PLAYBACK_GAIN_NUM] = {
 		.mode = PLAYBACK_RING_SPK_HP,
 		.reg  = WM8994_SPEAKER_VOLUME_LEFT,	/* 26h */
 		.mask = WM8994_SPKOUTL_VOL_MASK,
-		.gain = WM8994_SPKOUT_VU | 0x3E
+		.gain = WM8994_SPKOUT_VU | 0x3F		/* +6dB */
 	}, {
 		.mode = PLAYBACK_RING_SPK_HP,
 		.reg  = WM8994_CLASSD,			/* 25h */
 		.mask = WM8994_SPKOUTL_BOOST_MASK,
-		.gain = 0x5 << WM8994_SPKOUTL_BOOST_SHIFT
+		.gain = 0x6 << WM8994_SPKOUTL_BOOST_SHIFT	/* +9.0dB */
 	}, {
 		.mode = PLAYBACK_RING_SPK_HP,
 		.reg  = WM8994_LEFT_OUTPUT_VOLUME,	/* 1Ch */
