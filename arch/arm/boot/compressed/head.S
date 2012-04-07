@@ -509,8 +509,8 @@ __setup_mmu:	sub	r3, r4, #16384		@ Page directory size
  * bits for the RAM area only.
  */
 		mov	r0, r3
-#if defined(PHYS_OFFSET) && defined(END_MEM)
-		mov	r9, #PHYS_OFFSET	@ start of RAM
+#if defined(PLAT_PHYS_OFFSET) && defined(END_MEM)
+		mov	r9, #PLAT_PHYS_OFFSET	@ start of RAM
 		mov	r10, #END_MEM		@ end of RAM
 #else
 		mov	r9, r0, lsr #18
