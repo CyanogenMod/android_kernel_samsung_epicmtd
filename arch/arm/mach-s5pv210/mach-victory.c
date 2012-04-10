@@ -2414,7 +2414,7 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 
 static struct i2c_board_info i2c_devs4[] __initdata = {
 	{
-		I2C_BOARD_INFO("wm8994", (0x34>>1)),
+		I2C_BOARD_INFO("wm8994-samsung", (0x34>>1)),
 		.platform_data = &wm8994_pdata,
 	},
 };
@@ -3257,6 +3257,7 @@ static struct platform_device *victory_devices[] __initdata = {
 	&sec_device_btsleep,
 	&ram_console_device,
 	&sec_device_wifi,
+	&samsung_asoc_dma,
     &s3c_device_8893consumer,
 };
 
