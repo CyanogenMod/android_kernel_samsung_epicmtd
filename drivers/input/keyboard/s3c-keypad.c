@@ -257,6 +257,7 @@ static void keypad_timer_handler(unsigned long data)
                         some_keys_pressed++;
 			if(some_keys_pressed < 3)
                       	input_report_key(dev,i+1,1);
+				input_sync(dev);
                              SENSITIVE(pr_err("[key_press] keycode=%d\n", i+1));
 					}
 				else
@@ -264,6 +265,7 @@ static void keypad_timer_handler(unsigned long data)
 				if( i  != 5 &&i  != 15 &&i  != 25 &&i  != 35 &&i  != 44 )
 					{
 				input_report_key(dev,i+1,1);
+				input_sync(dev);
                              SENSITIVE(pr_err("[key_press_OFF] keycode=%d\n", i+1));
 					}
 				}
@@ -284,6 +286,7 @@ static void keypad_timer_handler(unsigned long data)
 			       if((i+1 == 35) || (i+1 == 36) || (i+1 == 46))
 			        some_keys_pressed--;
 				input_report_key(dev,i+1,0);
+				input_sync(dev);
                              SENSITIVE(pr_err("[key_release] keycode=%d\n", i+1));
 				}
 				else
@@ -291,6 +294,7 @@ static void keypad_timer_handler(unsigned long data)
 				if( i  != 5 &&i  != 15 &&i  != 25 &&i  != 35 &&i  != 44 )				
 				{
 				input_report_key(dev,i+1,0);
+				input_sync(dev);
                              SENSITIVE(pr_err("[key_release_OFF] keycode=%d\n", i+1));
 					}
 				}
