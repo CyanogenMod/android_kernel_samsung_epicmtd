@@ -113,6 +113,8 @@ static const struct voltage_map_desc *ldo_voltage_map[] = {
 	&buck4_voltage_map_desc,	/* BUCK4 */
 };
 
+static struct i2c_client *i2c_info;
+
 /*
  * Map ordinal values of increasing voltages to BUCK1_DVSARM registers
  * using Gray code, to allow the 2 set GPIOs to be individually
@@ -989,6 +991,82 @@ static int __devexit max8998_pmic_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_MACH_VICTORY
+static int max8998_pmic_suspend(struct platform_device *pdev, pm_message_t state)
+{
+        u8 on_off_reg = 0;
+        int ret;
+        ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF1,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF1\n");
+        } else {
+                        /* switch-off LDO 4 */
+                        on_off_reg &= ~(0x1 << 1);
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF1, on_off_reg);
+        }
+         ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF1,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF1\n");
+        } else {
+                        /* switch-off LDO 5 */
+                        on_off_reg &= ~(0x1) << 0;
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF1, on_off_reg);
+        }
+        ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF2,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF2\n");
+        } else {
+                        /* switch-off LDO 10 */
+                        on_off_reg &= ~(0x1) << 3;
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF2, on_off_reg);
+        }
+        ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF3,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF3\n");
+        } else {
+                        /* switch-off BATT_MON */
+                        on_off_reg &= ~(0x1 << 2);
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF3, on_off_reg);
+        }
+
+        return 0;
+}
+
+static int max8998_pmic_resume(struct platform_device *pdev)
+{
+        u8 on_off_reg = 0;
+        int ret;
+
+        ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF1,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF1\n");
+        } else {
+                        /* switch-on LDO 4 */
+                        on_off_reg |= (0x1) << 1;
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF1, on_off_reg);
+        }
+         ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF1,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF1\n");
+        } else {
+                        /* switch-on LDO 5 */
+                        on_off_reg |= (0x1) << 0;
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF1, on_off_reg);
+        }
+        ret = max8998_read_reg (i2c_info, MAX8998_REG_ONOFF3,  &on_off_reg);
+        if (ret) {
+                        printk( "Error reading MAX8998_REG_ONOFF3\n");
+        } else {
+                        /* switch-on BATT_MON */
+                        on_off_reg |= (0x1 << 2);
+                        max8998_write_reg (i2c_info, MAX8998_REG_ONOFF3, on_off_reg);
+        }
+
+        return 0;
+
+}
+#endif
+
 static const struct platform_device_id max8998_pmic_id[] = {
 	{ "max8998-pmic", TYPE_MAX8998 },
 	{ "lp3974-pmic", TYPE_LP3974 },
@@ -1003,6 +1081,8 @@ static struct platform_driver max8998_pmic_driver = {
 	},
 	.probe = max8998_pmic_probe,
 	.remove = __devexit_p(max8998_pmic_remove),
+	.suspend = max8998_pmic_suspend,
+	.resume = max8998_pmic_resume,
 	.id_table = max8998_pmic_id,
 };
 
