@@ -181,8 +181,11 @@ static void sec_jack_set_type(struct sec_jack_info *hi, int jack_type)
 	/* this can happen during slow inserts where we think we identified
 	 * the type but then we get another interrupt and do it again
 	 */
-	if (jack_type == hi->cur_jack_type)
+	if (jack_type == hi->cur_jack_type) {
+		if (jack_type != SEC_HEADSET_4POLE)
+			pdata->set_micbias_state(false);
 		return;
+	}
 
 	if (jack_type == SEC_HEADSET_4POLE) {
 		/* for a 4 pole headset, enable detection of send/end key */
@@ -285,6 +288,33 @@ static irqreturn_t sec_jack_detect_irq_thread(int irq, void *dev_id)
 	/* jack presence was detected the whole time, figure out which type */
 	determine_jack_type(hi);
 	return IRQ_HANDLED;
+}
+
+static void sec_jack_init_jack_state(struct sec_jack_info *hi)
+{
+	struct sec_jack_platform_data *pdata = hi->pdata;
+	int time_left_ms = DET_CHECK_TIME_MS;
+	unsigned npolarity = !hi->pdata->det_active_high;
+
+    pr_debug("%s", __func__);
+
+	/* set mic bias to enable adc */
+	pdata->set_micbias_state(true);
+
+	/* debounce headset jack.  don't try to determine the type of
+	 * headset until the detect state is true for a while.
+	 */
+	while (time_left_ms > 0) {
+		if (!(gpio_get_value(hi->pdata->det_gpio) ^ npolarity)) {
+			/* jack not detected. */
+			handle_jack_not_inserted(hi);
+			return;
+		}
+		msleep(10);
+		time_left_ms -= 10;
+	}
+	/* jack presence was detected the whole time, figure out which type */
+	determine_jack_type(hi);
 }
 
 /* thread run whenever the button of headset is pressed or released */
@@ -424,6 +454,15 @@ static int sec_jack_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(&pdev->dev, hi);
+
+#ifdef CONFIG_MACH_VICTORY
+	pdata->det_active_high = 1;
+#else
+	pdata->det_active_high = 0;
+#endif
+
+    /* initialize headset jack state */
+    sec_jack_init_jack_state(hi);
 
 	return 0;
 
