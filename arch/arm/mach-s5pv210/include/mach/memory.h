@@ -17,9 +17,7 @@
 #define PLAT_PHYS_OFFSET		UL(0x20000000)
 #else
 #define PLAT_PHYS_OFFSET		UL(0x30000000)
-#ifdef CONFIG_DDR_RAM_3G
 #define END_MEM				UL(0x58000000)
-#endif
 #endif
 
 #define CONSISTENT_DMA_SIZE	(SZ_8M + SZ_4M + SZ_2M)
