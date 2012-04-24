@@ -51,6 +51,10 @@ obj-$(CONFIG_KEYBOARD_TNETV107X)	+= tnetv107x-keypad.o
 obj-$(CONFIG_KEYBOARD_TWL4030)		+= twl4030_keypad.o
 obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
 obj-$(CONFIG_KEYBOARD_W90P910)		+= w90p910_keypad.o
+ifeq ($(CONFIG_MACH_VICTORY),y)
+obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)	+= cypress-touchkey-victory.o
+else
 obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)	+= cypress-touchkey.o
 obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)	+= cypress-touchkey-firmware.o
+endif
 obj-$(CONFIG_KEYPAD_S3C_VICTORY)     	+= s3c-keypad.o
