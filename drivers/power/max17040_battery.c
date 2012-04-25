@@ -129,34 +129,11 @@ static void max17040_get_soc(struct i2c_client *client)
 	struct max17040_chip *chip = i2c_get_clientdata(client);
 	u8 msb;
 	u8 lsb;
-	int pure_soc, adj_soc, soc;
 
 	msb = max17040_read_reg(client, MAX17040_SOC_MSB);
 	lsb = max17040_read_reg(client, MAX17040_SOC_LSB);
 
-#ifdef CONFIG_MACH_VICTORY
-
-	/*Adjusted SOC(Victory)
-	**RCOMP : D0h, FULL : 94.3, EMPTY : 1.4
-	**Adj_soc = (SOC%-EMPTY)/(FULL-EMPTY)*100
-	*/
-
-	pure_soc = msb * 100 + ((lsb * 100) / 256);
-
-	if (pure_soc >= 0)
-		adj_soc = ((pure_soc * 10000) - 140) / (9430 - 140);
-	else
-		adj_soc = 0;
-
-	soc = adj_soc / 100;
-
-	if (adj_soc % 100 >= 50)
-		soc += 1;
-
-	chip->soc = min(soc, 100);
-#else
 	chip->soc = min(msb, (u8)100);
-#endif
 }
 
 static void max17040_get_version(struct i2c_client *client)
