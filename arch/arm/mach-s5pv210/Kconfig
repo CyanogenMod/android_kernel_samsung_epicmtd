@@ -266,6 +266,16 @@ config MACH_VICTORY
 	help
 	  Machine support for Victory
 
+choice
+	prompt "Select Device Type"
+
+config SAMSUNG_EPIC
+	bool "select SPHD700"
+	depends on MACH_VICTORY
+	help
+	 Select Samsung Epic 4G
+endchoice
+
 config S5PV210_SETUP_FB
 	bool
 	depends on FB_S3C
