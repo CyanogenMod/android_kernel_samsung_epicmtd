@@ -90,6 +90,8 @@ struct s5pv210_dvs_conf {
 };
 
 #ifdef CONFIG_DVFS_LIMIT
+static unsigned int g_dvfs_printk_mask = ~(1<<DVFS_LOCK_TOKEN_PVR) &
+                                         ((1<<DVFS_LOCK_TOKEN_NUM)-1);
 static unsigned int g_dvfs_high_lock_token = 0;
 static unsigned int g_dvfs_high_lock_limit = 6;
 static unsigned int g_dvfslockval[DVFS_LOCK_TOKEN_NUM];
@@ -200,6 +202,7 @@ void s5pv210_lock_dvfs_high_level(uint nToken, uint perf_level)
 	uint freq_level;
 	struct cpufreq_policy *policy;
 
+	if (g_dvfs_printk_mask & (1 << nToken))
 	printk(KERN_DEBUG "%s : lock with token(%d) level(%d) current(%X)\n",
 			__func__, nToken, perf_level, g_dvfs_high_lock_token);
 
@@ -248,6 +251,7 @@ void s5pv210_unlock_dvfs_high_level(unsigned int nToken)
 
 	//mutex_unlock(&dvfs_high_lock);
 
+	if (g_dvfs_printk_mask & (1 << nToken))
 	printk(KERN_DEBUG "%s : unlock with token(%d) current(%X) level(%d)\n",
 			__func__, nToken, g_dvfs_high_lock_token, g_dvfs_high_lock_limit);
 }
@@ -658,6 +662,30 @@ static int s5pv210_cpufreq_notifier_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
+#ifdef CONFIG_DVFS_LIMIT
+static ssize_t show_dvfs_printk_mask(struct cpufreq_policy *policy,
+                                     char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%u\n", g_dvfs_printk_mask);
+}
+
+static ssize_t store_dvfs_printk_mask(struct cpufreq_policy *policy,
+                                      const char *buf, size_t count)
+{
+	unsigned long val;
+	int res;
+
+	if ((res = strict_strtoul(buf, 0, &val)) < 0)
+		return res;
+
+	g_dvfs_printk_mask = val & ((1<<DVFS_LOCK_TOKEN_NUM)-1);
+
+	return count;
+}
+
+cpufreq_freq_attr_rw(dvfs_printk_mask);
+#endif
+
 static int s5pv210_cpufreq_reboot_notifier_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
@@ -673,6 +701,9 @@ static int s5pv210_cpufreq_reboot_notifier_event(struct notifier_block *this,
 
 static struct freq_attr *s5pv210_cpufreq_attr[] = {
 	&cpufreq_freq_attr_scaling_available_freqs,
+#ifdef CONFIG_DVFS_LIMIT
+	&dvfs_printk_mask,
+#endif
 	NULL,
 };
 
