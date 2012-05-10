@@ -1541,7 +1541,7 @@ int kernel_kexec(void)
 	} else
 #endif
 	{
-#ifdef CONFIG_KEXEC_HARDBOOT
+#if defined(CONFIG_KEXEC_HARDBOOT) && !defined(CONFIG_MACH_VICTORY)
 		if (kexec_image->hardboot)
 			/* Reboot with the recovery kernel since the boot kernel decompressor may
 			 * not support the hardboot jump. */
