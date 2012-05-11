@@ -89,9 +89,6 @@ void s5pv210_setup_sdhci_cfg_card(struct platform_device *dev,
 				ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_BASIC;
 			//else
 			//	ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_INVERT;
-		} else if (machine_is_victory()) {
-			ctrl3 = S3C_SDHCI_CTRL3_FCSELTX_BASIC;
-			ctrl3 |= S3C_SDHCI_CTRL3_FCSELRX_BASIC;
 		} else
 			ctrl3 = S3C_SDHCI_CTRL3_FCSELTX_BASIC |
 				S3C_SDHCI_CTRL3_FCSELRX_INVERT;
