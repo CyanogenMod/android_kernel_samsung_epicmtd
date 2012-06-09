@@ -45,9 +45,6 @@
 
 #define DEVICE_NAME "cypress-touchkey"
 
-
-
-
 struct cypress_touchkey_devdata {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
