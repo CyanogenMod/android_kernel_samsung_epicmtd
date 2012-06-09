@@ -61,10 +61,6 @@ struct dram_conf {
 /* DRAM configuration (DMC0 and DMC1) */
 static struct dram_conf s5pv210_dram_conf[2];
 
-enum perf_level {
-	L0, L1, L2, L3, L4,
-};
-
 enum s5pv210_mem_type {
 	LPDDR	= 0x1,
 	LPDDR2	= 0x2,
