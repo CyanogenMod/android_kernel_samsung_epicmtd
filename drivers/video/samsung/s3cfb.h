@@ -227,8 +227,8 @@ struct s3cfb_global {
 	struct device		*dev;
 	struct clk		*clock;
 	struct regulator	*regulator;
-	struct regulator	*vcc_lcd;
-	struct regulator	*vlcd;
+	struct regulator        *vcc_lcd;
+	struct regulator        *vlcd;
 	int			irq;
 	struct fb_info		**fb;
 	struct completion	fb_complete;
@@ -240,7 +240,7 @@ struct s3cfb_global {
 	enum s3cfb_output_t	output;
 	enum s3cfb_rgb_mode_t	rgb_mode;
 	struct s3cfb_lcd	*lcd;
-	u32			pixclock_hz;
+	u32      pixclock_hz;
 
 #ifdef CONFIG_HAS_WAKELOCK
 	struct early_suspend	early_suspend;
@@ -343,6 +343,7 @@ extern int s3cfb_window_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_win_map_on(struct s3cfb_global *ctrl, int id, int color);
 extern int s3cfb_win_map_off(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_control(struct s3cfb_global *ctrl, int id);
+extern int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_position(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_window_size(struct s3cfb_global *ctrl, int id);
