@@ -261,10 +261,10 @@ static ssize_t led_off_duration_store(struct device *dev,
 }
 
 
-static DEVICE_ATTR(delay_on, 0777, led_delay_on_show, led_delay_on_store);
-static DEVICE_ATTR(delay_off, 0777, led_delay_off_show, led_delay_off_store);
-static DEVICE_ATTR(blink_count, 0777, led_blink_count_show, led_blink_count_store);
-static DEVICE_ATTR(off_duration, 0777, led_off_duration_show, led_off_duration_store);
+static DEVICE_ATTR(delay_on, 0666, led_delay_on_show, led_delay_on_store);
+static DEVICE_ATTR(delay_off, 0666, led_delay_off_show, led_delay_off_store);
+static DEVICE_ATTR(blink_count, 0666, led_blink_count_show, led_blink_count_store);
+static DEVICE_ATTR(off_duration, 0666, led_off_duration_show, led_off_duration_store);
 
 static void notification_trig_activate(struct led_classdev *led_cdev)
 {
