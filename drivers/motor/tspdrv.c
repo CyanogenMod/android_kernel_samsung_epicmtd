@@ -150,19 +150,19 @@ static enum hrtimer_restart vibetonz_timer_func(struct hrtimer *timer)
 
 static int get_time_for_vibetonz(struct timed_output_dev *dev)
 {
-	int remaining;
+	int remaining = 0;
 
 	if (hrtimer_active(&timer)) {
 		ktime_t r = hrtimer_get_remaining(&timer);
-		remaining = r.tv.sec * 1000 + r.tv.nsec / 1000000;
+		struct timeval t = ktime_to_timeval(r);
+		remaining = t.tv_sec * 1000 + t.tv_usec / 1000;
 	} else
 		remaining = 0;
 
-	if (vibrator_value ==-1)
+	if (vibrator_value == -1)
 		remaining = -1;
 
 	return remaining;
-
 }
 
 static void enable_vibetonz_from_user(struct timed_output_dev *dev,int value)
@@ -209,13 +209,13 @@ static int open(struct inode *inode, struct file *file);
 static int release(struct inode *inode, struct file *file);
 static ssize_t read(struct file *file, char *buf, size_t count, loff_t *ppos);
 static ssize_t write(struct file *file, const char *buf, size_t count, loff_t *ppos);
-static int ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
+static long ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 static struct file_operations fops =
 {
     .owner =    THIS_MODULE,
     .read =     read,
     .write =    write,
-    .ioctl =    ioctl,
+    .unlocked_ioctl = ioctl,
     .open =     open,
     .release =  release
 };
@@ -589,7 +589,7 @@ static ssize_t write(struct file *file, const char *buf, size_t count, loff_t *p
     return count;
 }
 
-static int ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
+static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 #ifdef QA_TEST
     int i;

@@ -53,7 +53,7 @@ struct task_struct  *g_pTspThread;
 static int g_nWatchdogCounter = 0;
 
 DECLARE_COMPLETION(g_tspCompletion);
-DECLARE_MUTEX(g_hMutex);
+DEFINE_SEMAPHORE(g_hMutex);
 
 /* Forward declarations */
 static void VibeOSKernelLinuxStartTimer(void);
