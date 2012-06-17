@@ -38,11 +38,18 @@
 #define TSPDRV_ENABLE_AMP                   _IO(TSPDRV_MAGIC_NUMBER & 0xFF, 3)
 #define TSPDRV_DISABLE_AMP                  _IO(TSPDRV_MAGIC_NUMBER & 0xFF, 4)
 #define TSPDRV_GET_NUM_ACTUATORS            _IO(TSPDRV_MAGIC_NUMBER & 0xFF, 5)
-#define VIBE_MAX_DEVICE_NAME_LENGTH			64
+#define VIBE_MAX_DEVICE_NAME_LENGTH         64
 #define SPI_HEADER_SIZE                     3   /* DO NOT CHANGE - SPI buffer header size */
 #define VIBE_OUTPUT_SAMPLE_SIZE             50  /* DO NOT CHANGE - maximum number of samples */
 
-//#define VIBE_TUNING
+#define VIBE_TUNING
+#define VIBE_DEBUG
+
+#ifdef VIBE_DEBUG
+#define VibeDebug(args...) {{ printk(KERN_DEBUG "\x1b[1;33m[VibeTonz]\x1b[0m ");printk(args); }}
+#else   /* !VIBE_DEBUG */
+#define VibeDebug(args...) {{}}
+#endif  /* VIBE_DEBUG */
 
 /* Type definitions */
 #ifdef __KERNEL__
@@ -77,11 +84,11 @@ typedef struct
 
 /* Kernel Debug Macros */
 #ifdef __KERNEL__
-    #ifdef VIBE_DEBUG
-        #define DbgOut(_x_) printk _x_
-    #else   /* VIBE_DEBUG */
-        #define DbgOut(_x_)
-    #endif  /* VIBE_DEBUG */
+#ifdef VIBE_DEBUG
+#define DbgOut(_x_) printk _x_
+#else   /* VIBE_DEBUG */
+#define DbgOut(_x_)
+#endif  /* VIBE_DEBUG */
 #endif  /* __KERNEL__ */
 
 #endif  /* _TSPDRV_H */

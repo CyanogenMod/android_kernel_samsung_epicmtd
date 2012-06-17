@@ -1,11 +1,11 @@
 /*
 ** =========================================================================
 ** File:
-**     ImmVibeSPI.c
+**  ImmVibeSPI.c
 **
 ** Description:
-**     Device-dependent functions called by Immersion TSP API
-**     to control PWM duty cycle, amp enable/disable, save IVT file, etc...
+**  Device-dependent functions called by Immersion TSP API
+**  to control PWM duty cycle, amp enable/disable, save IVT file, etc...
 **
 ** Portions Copyright (c) 2008-2009 Immersion Corporation. All Rights Reserved.
 **
@@ -41,280 +41,249 @@
 ** This SPI supports only one actuator.
 */
 #define NUM_ACTUATORS 1
+#define PWM_DUTY_MAX  579 /* 13MHz / (579 + 1) = 22.4kHz */
+#define PWM_PERIOD    87084/2 /* 89284 */
+#define PWM_DEVICE    1
 
-#define PWM_DUTY_MAX    579 /* 13MHz / (579 + 1) = 22.4kHz */
-
-#define FREQ_COUNT		87084/2	/*89284*/
-#if 0
-#if defined CONFIG_S5PV210_VICTORY
-#define PWM_DEVICE	2
-#elif defined CONFIG_S5PV210_ATLAS
-#define PWM_DEVICE	1
-#endif
-#endif
-
-#define PWM_DEVICE	1
-struct pwm_device	*Immvib_pwm;
-
+struct pwm_device *Immvib_pwm;
 static bool g_bAmpEnabled = false;
-
-long int freq_count = FREQ_COUNT;
+long int pwm_period = PWM_PERIOD;
 extern struct vibrator_platform_data vib_plat_data;
+
 /*
 ** Called to disable amp (disable output force)
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpDisable(VibeUInt8 nActuatorIndex)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_AmpDisable(VibeUInt8 nActuatorIndex)
 {
+	VibeDebug("%s: enter: %i \n", __func__, __LINE__);
 #if 0
 #error Please review the code between the #if and #endif
-
-    if (g_bAmpEnabled)
-    {
-        DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_AmpDisable.\n"));
-
-        g_bAmpEnabled = false;
-
+	if (g_bAmpEnabled)
+	{
+		DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_AmpDisable.\n"));
+		g_bAmpEnabled = false;
 #if 0
-        mhn_gpio_set_level(GPIO_EN, GPIO_LEVEL_LOW);
-	    mz_ops.bstat &= ~HN_BATTERY_MOTOR;
+		mhn_gpio_set_level(GPIO_EN, GPIO_LEVEL_LOW);
+		mz_ops.bstat &= ~HN_BATTERY_MOTOR;
 #endif
-    }
+	}
 #endif
-
-
-    if (g_bAmpEnabled)
-    {
+	if (g_bAmpEnabled) {
 		g_bAmpEnabled = false;
 
-		pwm_config(Immvib_pwm, 0, freq_count/2);
+		VibeDebug("%s pwm_duty: %d | pwm_period: %ld \n", __func__, 0, (pwm_period / 2));
+		pwm_config(Immvib_pwm, 0, (pwm_period / 2));
 		pwm_disable(Immvib_pwm);
 		//gpio_request(GPIO_VIBTONE_EN1, "GPIO_VIBTONE_EN1");
-		gpio_direction_output(vib_plat_data.vib_enable_gpio,0);
+		gpio_direction_output(vib_plat_data.vib_enable_gpio, 0);
 		gpio_direction_input(vib_plat_data.vib_enable_gpio);
-		s3c_gpio_setpull(vib_plat_data.vib_enable_gpio,S3C_GPIO_PULL_DOWN);
+		s3c_gpio_setpull(vib_plat_data.vib_enable_gpio, S3C_GPIO_PULL_DOWN);
 		//gpio_free(GPIO_VIBTONE_EN1);
-    }
-
+	}
 	return VIBE_S_SUCCESS;
 }
 
 /*
 ** Called to enable amp (enable output force)
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex)
 {
+	VibeDebug("%s: enter: %i \n", __func__, __LINE__);
 #if 0
 #error Please review the code between the #if and #endif
-
-    if (!g_bAmpEnabled)
-    {
-        DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_AmpEnable.\n"));
-
-        g_bAmpEnabled = true;
-
-#if 0
-        /*
-        ** Ensure the PWM frequency is at the expected value. These 2 lines of code
-        ** can be removed if no other application alters the PWM frequency.
-        */
-        PWM_CTRL  = 0;                  /* 13Mhz / (0 + 1) = 13MHz */
-        PWM_PERIOD = PWM_DUTY_MAX;      /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
-
-        /* Set duty cycle to 50% */
-        PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
-
-        /* Enable amp */
-        mhn_gpio_set_level(GPIO_EN, GPIO_LEVEL_HIGH);
-        mz_ops.bstat |= HN_BATTERY_MOTOR;
-#endif
-    }
-#endif
-
-    if (!g_bAmpEnabled)
-    {
+	if (!g_bAmpEnabled)
+	{
+		DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_AmpEnable.\n"));
 		g_bAmpEnabled = true;
-
-
+#if 0
+		/*
+		** Ensure the PWM frequency is at the expected value. These 2 lines of code
+		** can be removed if no other application alters the PWM frequency.
+		*/
+		PWM_CTRL  = 0;              /* 13Mhz / (0 + 1) = 13MHz */
+		PWM_PERIOD = PWM_DUTY_MAX;  /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
+		/* Set duty cycle to 50% */
+		PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
+		/* Enable amp */
+		mhn_gpio_set_level(GPIO_EN, GPIO_LEVEL_HIGH);
+		mz_ops.bstat |= HN_BATTERY_MOTOR;
+#endif
+	}
+#endif
+	if (!g_bAmpEnabled)
+	{
+		g_bAmpEnabled = true;
 		pwm_enable(Immvib_pwm);
-
-
 		//gpio_request(GPIO_VIBTONE_EN1, "GPIO_VIBTONE_EN1");
 		gpio_direction_output(vib_plat_data.vib_enable_gpio, 0);
 		mdelay(1);
-		gpio_set_value(vib_plat_data.vib_enable_gpio,1);
+		gpio_set_value(vib_plat_data.vib_enable_gpio, 1);
 		//gpio_free(GPIO_VIBTONE_EN1);
-    }
-
-    return VIBE_S_SUCCESS;
+	}
+	return VIBE_S_SUCCESS;
 }
 
 /*
 ** Called at initialization time to set PWM freq, disable amp, etc...
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_Initialize(void)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_Initialize(void)
 {
+	VibeDebug("%s: enter: %i \n", __func__, __LINE__);
 #if 0
 #error Please review the code between the #if and #endif
-
-    DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_Initialize.\n"));
-
-    g_bAmpEnabled = true;   /* to force ImmVibeSPI_ForceOut_AmpDisable disabling the amp */
-
-    /*
-    ** Disable amp.
-    ** If multiple actuators are supported, please make sure to call ImmVibeSPI_ForceOut_AmpDisable
-    ** for each actuator (provide the actuator index as input argument).
-    */
-    ImmVibeSPI_ForceOut_AmpDisable(0);
-
+	DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_Initialize.\n"));
+	g_bAmpEnabled = true;   /* to force ImmVibeSPI_ForceOut_AmpDisable disabling the amp */
+	/*
+	** Disable amp.
+	** If multiple actuators are supported, please make sure to call ImmVibeSPI_ForceOut_AmpDisable
+	** for each actuator (provide the actuator index as input argument).
+	*/
+	ImmVibeSPI_ForceOut_AmpDisable(0);
 #if 0
-    /*
-    ** PWM frequency:
-    ** The PWM frequency must be set to a fixed value and shouldn't change
-    ** during the lifetime of the app. The ideal solution would be to use a
-    ** frequency value between 20kHz and 50kHz. A frequency value slightly
-    ** outside of the above limits should still work and be compliant with
-    ** TSP requirements (please refer to the TSP integration guide for
-    ** further information).
-    */
-
-    /* 22.4kHz PWM, duty cycle 50% */
-    PWM_CTRL = 0;                   /* 13Mhz / (0 + 1) = 13MHz */
-    PWM_PERIOD = PWM_DUTY_MAX;      /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
-    PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
+	/*
+	** PWM frequency:
+	** The PWM frequency must be set to a fixed value and shouldn't change
+	** during the lifetime of the app. The ideal solution would be to use a
+	** frequency value between 20kHz and 50kHz. A frequency value slightly
+	** outside of the above limits should still work and be compliant with
+	** TSP requirements (please refer to the TSP integration guide for
+	** further information).
+	*/
+	/* 22.4kHz PWM, duty cycle 50% */
+	PWM_CTRL = 0;               /* 13Mhz / (0 + 1) = 13MHz */
+	PWM_PERIOD = PWM_DUTY_MAX;  /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
+	PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
 #endif
 #endif
 	g_bAmpEnabled = true;
-
 	Immvib_pwm = pwm_request(vib_plat_data.timer_id, "Immvibtonz");
-	pwm_config(Immvib_pwm, freq_count/2, freq_count);
+	VibeDebug("%s pwm_duty: %ld | pwm_period: %ld \n", __func__, (pwm_period / 2), pwm_period);
+	pwm_config(Immvib_pwm, (pwm_period / 2), pwm_period);
 	ImmVibeSPI_ForceOut_AmpDisable(0);
-
-    return VIBE_S_SUCCESS;
+	return VIBE_S_SUCCESS;
 }
 
 /*
 ** Called at termination time to set PWM freq, disable amp, etc...
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_Terminate(void)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_Terminate(void)
 {
-//#error Please review the code between the #if and #endif
-
- //   DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_Terminate.\n"));
-
-    /*
-    ** Disable amp.
-    ** If multiple actuators are supported, please make sure to call ImmVibeSPI_ForceOut_AmpDisable
-    ** for each actuator (provide the actuator index as input argument).
-    */
-
-    ImmVibeSPI_ForceOut_AmpDisable(0);
-
+	VibeDebug("%s: enter: %i \n", __func__, __LINE__);
 #if 0
-    /* Set PWM frequency */
-    PWM_CTRL  = 0;                  /* 13Mhz / (0 + 1) = 13MHz */
-    PWM_PERIOD = PWM_DUTY_MAX;      /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
-
-    /* Set duty cycle to 50% */
-    PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
+#error Please review the code between the #if and #endif
+	DbgOut((KERN_DEBUG "ImmVibeSPI_ForceOut_Terminate.\n"));
+	/*
+	** Disable amp.
+	** If multiple actuators are supported, please make sure to call ImmVibeSPI_ForceOut_AmpDisable
+	** for each actuator (provide the actuator index as input argument).
+	*/
+	ImmVibeSPI_ForceOut_AmpDisable(0);
+#if 0
+	/* Set PWM frequency */
+	PWM_CTRL  = 0;              /* 13Mhz / (0 + 1) = 13MHz */
+	PWM_PERIOD = PWM_DUTY_MAX;  /* 13Mhz / (PWM_DUTY_MAX + 1) = 22.4kHz */
+	/* Set duty cycle to 50% */
+	PWM_DUTY = (PWM_DUTY_MAX+1)>>1; /* Duty cycle range = [0, PWM_DUTY_MAX] */
 #endif
-
-    return VIBE_S_SUCCESS;
+#endif
+	return VIBE_S_SUCCESS;
 }
 
 /*
 ** Called by the real-time loop to set PWM duty cycle, and enable amp if required
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_Set(VibeUInt8 nActuatorIndex, VibeInt8 nForce)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_Set(VibeUInt8 nActuatorIndex, VibeInt8 nForce)
 {
 #if 0
 #error Please review the code between the #if and #endif
-
 #if 0
-    VibeUInt32 nTmp;
+	VibeUInt32 nTmp;
 #endif
-
-    if (nForce == 0)
-    {
-#if 0
-		/* Set 50% duty cycle */
-        PWM_DUTY = (PWM_DUTY_MAX+1)>>1;
-#endif
-    }
-    else
-    {
-#if 0
-        /* Map force from [-127, 127] to [0, PWM_DUTY_MAX] */
-        nTmp = ((nForce + 127) * 9) >> 2;
-
-        /*
-        ** The above mapping will output PWM duty cycle in [0, PWM_DUTY_MAX] range.
-        ** For PWM_DUTY_MAX == 579, max duty cycle is 98.6%.
-        ** As long as we don't hit the 100% mark, we're OK
-        */
-        PWM_DUTY = nTmp;
-#endif
-    }
-#endif
-	int pwm_duty=freq_count/2 + ((freq_count/2 - 2) * nForce)/127;
-
 	if (nForce == 0)
 	{
-
-		ImmVibeSPI_ForceOut_AmpDisable(0);
-
+#if 0
+		/* Set 50% duty cycle */
+		PWM_DUTY = (PWM_DUTY_MAX+1)>>1;
+#endif
 	}
 	else
 	{
-		pwm_config(Immvib_pwm, pwm_duty, freq_count);
+#if 0
+		/* Map force from [-127, 127] to [0, PWM_DUTY_MAX] */
+		nTmp = ((nForce + 127) * 9) >> 2;
+		/*
+		** The above mapping will output PWM duty cycle in [0, PWM_DUTY_MAX] range.
+		** For PWM_DUTY_MAX == 579, max duty cycle is 98.6%.
+		** As long as we don't hit the 100% mark, we're OK
+		*/
+		PWM_DUTY = nTmp;
+#endif
+	}
+#endif
+	int pwm_duty = (pwm_period / 2) + (((pwm_period / 2) - 2) * nForce) / 127;
+	VibeDebug("%s nForce: %d | pwm_duty: %d | pwm_period: %ld \n", __func__, nForce, pwm_duty, pwm_period);
+	if (nForce == 0) {
+		ImmVibeSPI_ForceOut_AmpDisable(0);
+	} else {
+		pwm_config(Immvib_pwm, pwm_duty, pwm_period);
 		ImmVibeSPI_ForceOut_AmpEnable(0);
 	}
-
-//	printk("[VIBETONZ] %s nForce: %d\n",__func__, nForce);
-
 	return VIBE_S_SUCCESS;
 }
 
 /*
 ** Called by the real-time loop to set force output, and enable amp if required
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_SetSamples(VibeUInt8 nActuatorIndex, VibeUInt16 nOutputSignalBitDepth, VibeUInt16 nBufferSizeInBytes, VibeInt8* pForceOutputBuffer)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_SetSamples(VibeUInt8 nActuatorIndex, VibeUInt16 nOutputSignalBitDepth,
+						VibeUInt16 nBufferSizeInBytes, VibeInt8* pForceOutputBuffer)
 {
-    /* This function is not called for LRA device */
-    return VIBE_S_SUCCESS;
+	VibeDebug("%s: enter: %i: this function does nothing! \n", __func__, __LINE__);
+	/* This function is not called for LRA device */
+	return VIBE_S_SUCCESS;
 }
 
 #if 0
 /*
 ** Called to set force output frequency parameters
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_SetFrequency(VibeUInt8 nActuatorIndex, VibeUInt16 nFrequencyParameterID, VibeUInt32 nFrequencyParameterValue)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_ForceOut_SetFrequency(VibeUInt8 nActuatorIndex,
+																	VibeUInt16 nFrequencyParameterID,
+																	VibeUInt32 nFrequencyParameterValue)
 {
-//#error Please review the code between the #if and #endif
 
 #if 0
-    #error  "The OEM must handle different frequency parameters here"
+#error Please review the code between the #if and #endif
+#if 0
+#error  "The OEM must handle different frequency parameters here"
 #endif
-
-    return VIBE_S_SUCCESS;
+#endif
+	return VIBE_S_SUCCESS;
 }
 #endif
 
 /*
 ** Called to get the device name (device name must be returned as ANSI char)
 */
-IMMVIBESPIAPI VibeStatus ImmVibeSPI_Device_GetName(VibeUInt8 nActuatorIndex, char *szDevName, int nSize)
+IMMVIBESPIAPI VibeStatus
+ImmVibeSPI_Device_GetName(VibeUInt8 nActuatorIndex, char *szDevName, int nSize)
 {
-//#error Please review the code between the #if and #endif
-
-#if 0   /* The following code is provided as a sample. Please modify as required. */
-    if ((!szDevName) || (nSize < 1)) return VIBE_E_FAIL;
-
-    DbgOut((KERN_DEBUG "ImmVibeSPI_Device_GetName.\n"));
-
-    strncpy(szDevName, "Generic Linux Device", nSize-1);
-    szDevName[nSize - 1] = '\0';    /* make sure the string is NULL terminated */
+	VibeDebug("%s: enter: %i \n", __func__, __LINE__);
+#if 0
+#error Please review the code between the #if and #endif
+#if 0
+	/* The following code is provided as a sample. Please modify as required. */
+	if ((!szDevName) || (nSize < 1)) return VIBE_E_FAIL;
+	DbgOut((KERN_DEBUG "ImmVibeSPI_Device_GetName.\n"));
+	strncpy(szDevName, "Generic Linux Device", nSize-1);
+	szDevName[nSize - 1] = '\0'; /* make sure the string is NULL terminated */
 #endif
-
-    return VIBE_S_SUCCESS;
+#endif
+	return VIBE_S_SUCCESS;
 }
