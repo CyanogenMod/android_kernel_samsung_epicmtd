@@ -66,6 +66,8 @@
 #define FAST_POLL			(1 * 60)
 #define SLOW_POLL			(10 * 60)
 
+#define USE_WIMAX       (0x1 << 7)
+
 #define DISCONNECT_BAT_FULL		0x1
 #define DISCONNECT_TEMP_OVERHEAT	0x2
 #define DISCONNECT_TEMP_FREEZE		0x4
@@ -73,6 +75,8 @@
 
 #define ATTACH_USB	1
 #define ATTACH_TA	2
+
+#define USE_MODULE_TIMEOUT      (10*60*1000)    // 10 min (DG05_FINAL: 1 min -> 10 min)
 
 #define HIGH_BLOCK_TEMP			500
 #define HIGH_RECOVER_TEMP		420
@@ -114,6 +118,7 @@ struct chg_data {
 	struct adc_sample_info	adc_sample[ENDOFADC];
 	struct battery_info	bat_info;
 	struct mutex		mutex;
+	struct timer_list	bat_use_timer;
 
 	enum cable_type_t	cable_status;
 	bool			charging;
@@ -126,7 +131,11 @@ struct chg_data {
 	int                     slow_poll;
 	ktime_t                 last_poll;
 	struct max8998_charger_callbacks callbacks;
+	uint			batt_use;
+	uint			batt_use_wait;
 };
+
+static struct chg_data *pchg = NULL;	// pointer to chg initialized in probe function
 
 static char *supply_list[] = {
 	"battery",
@@ -615,6 +624,43 @@ static void s3c_battery_alarm(struct alarm *alarm)
 	queue_work(chg->monitor_wqueue, &chg->bat_work);
 }
 
+static void s3c_bat_use_timer_func(unsigned long param)
+{
+	struct chg_data *chg = (struct chg_data *)param;
+
+	chg->batt_use &= (~chg->batt_use_wait);
+	pr_info("/BATT_USE/ timer expired (0x%x)\n", chg->batt_use);
+}
+
+static void s3c_bat_use_module(struct chg_data *chg, int module, int enable)
+{
+	del_timer_sync(&chg->bat_use_timer);
+	chg->batt_use &= (~chg->batt_use_wait); // apply previous clear request
+
+	if (enable) {
+		chg->batt_use_wait = 0;
+		chg->batt_use |= module;
+		pr_info("/BATT_USE/ use module 0x%x\n", chg->batt_use);
+	} else {
+		if (chg->batt_use == 0)
+			return;	/* nothing to clear */
+		chg->batt_use_wait = module;
+		mod_timer(&chg->bat_use_timer, jiffies + msecs_to_jiffies(USE_MODULE_TIMEOUT));
+		pr_info("/BATT_USE/ start timer (curr 0x%x, wait 0x%x)\n",
+			chg->batt_use, chg->batt_use_wait);
+	}
+}
+
+#ifdef CONFIG_MACH_VICTORY
+int s3c_bat_use_wimax(int onoff)
+{
+	struct chg_data *chg = pchg;
+
+	s3c_bat_use_module(chg, USE_WIMAX, onoff);
+}
+EXPORT_SYMBOL(s3c_bat_use_wimax);
+#endif
+
 static irqreturn_t max8998_int_work_func(int irq, void *max8998_chg)
 {
 	int ret;
@@ -749,6 +795,7 @@ static __devinit int max8998_charger_probe(struct platform_device *pdev)
 		"max8998-charger");
 
 	INIT_WORK(&chg->bat_work, s3c_bat_work);
+	setup_timer(&chg->bat_use_timer, s3c_bat_use_timer_func, (unsigned long)chg);
 
 	chg->monitor_wqueue =
 		create_freezable_workqueue(dev_name(&pdev->dev));
@@ -798,6 +845,8 @@ static __devinit int max8998_charger_probe(struct platform_device *pdev)
 	chg->callbacks.set_cable = max8998_set_cable;
 	if (chg->pdata->register_callbacks)
 		chg->pdata->register_callbacks(&chg->callbacks);
+
+	pchg = chg;	// pointer...
 
 	wake_lock(&chg->work_wake_lock);
 	queue_work(chg->monitor_wqueue, &chg->bat_work);
