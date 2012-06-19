@@ -126,6 +126,34 @@ static const struct voltage_map_desc *ldo_voltage_map[] = {
 
 #define DVSARMREG(index) ((index ^ (index >> 1)) ^ ((pdata->buck1_default_idx & 0x2) >> 1))
 
+static struct i2c_client *i2c_info;
+
+/*for WIMAX USB MODEM*******/
+int max8998_read_wimax_reg(u8 reg, u8 *data, u8 length,u8 flag)
+{
+  int ret;
+
+    if(flag == 1)
+    {
+     ret = max8998_bulk_read(i2c_info,reg,length,data);
+     if(ret<0)
+          printk("********error in read bulk data\n");
+    }
+    else
+    {
+
+        ret = max8998_bulk_write(i2c_info,reg,length,data);
+       if(ret<0)
+          printk("********error in write bulk data\n");
+    }
+
+   return ret;
+}
+
+EXPORT_SYMBOL(max8998_read_wimax_reg);
+
+/*for WIMAX USB MODEM*******/
+
 static inline int max8998_get_ldo(struct regulator_dev *rdev)
 {
 	return rdev_get_id(rdev);
