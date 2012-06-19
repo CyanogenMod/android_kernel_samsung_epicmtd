@@ -273,6 +273,13 @@ config WIFI_CONTROL_FUNC
 	help
 	  Enables Power/Reset/Carddetect function abstraction
 
+config WIMAX_VICTORY
+	tristate "select wimax module support for victory"
+	default m
+config WIMAX_GPIO_VICTORY
+	tristate "select wimax gpio module support for victory"
+	default m
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"
