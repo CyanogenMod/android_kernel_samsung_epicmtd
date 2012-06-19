@@ -24,6 +24,21 @@
 #include <linux/regulator/max8893.h>
 #include <linux/slab.h>
 
+#define DBG(fmt...)
+//#define DBG(fmt...) printk(fmt)
+
+/* Registers */
+#define MAX8893_REG_ONOFF 0x00
+#define MAX8893_REG_DISCHARGE  0x01
+#define MAX8893_REG_LSTIME     0x02
+#define MAX8893_REG_DVSRAMP    0x03
+#define MAX8893_REG_BUCK       0x04
+#define MAX8893_REG_LDO1       0x05
+#define MAX8893_REG_LDO2       0x06
+#define MAX8893_REG_LDO3       0x07
+#define MAX8893_REG_LDO4       0x08
+#define MAX8893_REG_LDO5       0x09
+
 #define MAX8893_STEP		(100000)
 
 enum {
@@ -47,6 +62,154 @@ static struct max8893_desc *rdev_get_max8893_desc(struct regulator_dev *rdev)
 {
 	return container_of(rdev->desc, struct max8893_desc, desc);
 }
+
+static u8 max8893_cache_regs[] = {
+	0x01, 0xFF, 0x08, 0x09, 0x02, //0x01
+	0x02, 0x0E, 0x11, 0x19, 0x16, //0x05
+};
+
+struct max8893 *client_8893data_p = NULL;
+
+static int max8893_i2c_cache_read(struct i2c_client *client, u8 reg, u8 *dest)
+{
+	*dest = max8893_cache_regs[reg];
+
+	DBG("func =%s : reg = %d, value = %x\n",__func__,reg, max8893_cache_regs[reg]);
+
+	return 0;
+}
+
+static int max8893_i2c_read(struct i2c_client *client, u8 reg, u8 *dest)
+{
+       int ret;
+
+       DBG("func =%s :: Start!!!\n",__func__);
+
+       ret = i2c_smbus_read_byte_data(client, reg);
+
+       DBG("func =%s : i2c_smbus_read_byte_data -> return data = %d\n",__func__, ret);
+
+       if (ret < 0)
+               return -EIO;
+
+       max8893_cache_regs[reg] = ret;
+
+       DBG("func =%s : reg = %d, value = %x\n",__func__,reg, ret);
+
+       *dest = ret & 0xff;
+       return 0;
+}
+
+static int max8893_i2c_write(struct i2c_client *client, u8 reg, u8 value)
+{
+	DBG("func =%s : reg = %d, value = %x\n",__func__,reg, value); 
+
+	max8893_cache_regs[reg] = value;
+	return i2c_smbus_write_byte_data(client, reg, value);
+}
+
+static u8 max8893_read_reg(struct max8893 *max8893, u8 reg)
+{
+
+	u8 val = 0;
+	DBG("func =%s called for reg= %x\n",__func__,reg);
+
+#ifndef CONFIG_CPU_FREQ
+	mutex_lock(&max8893->mutex);
+#endif
+	max8893_i2c_cache_read(max8893->client, reg, &val);
+#ifndef CONFIG_CPU_FREQ
+	mutex_unlock(&max8893->mutex);
+#endif
+
+	return val;
+}
+
+static int max8893_write_reg(struct max8893 *max8893, u8 value, u8 reg)
+{
+
+	DBG("func =%s called for reg= %x, data=%x\n",__func__,reg,value);
+
+#ifndef CONFIG_CPU_FREQ
+	mutex_lock(&max8893->mutex);
+#endif
+
+	max8893_i2c_write(max8893->client, reg, value);
+#ifndef CONFIG_CPU_FREQ
+	mutex_unlock(&max8893->mutex);
+#endif
+	return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+//DIRECT APIS
+
+int max8893_ldo_enable_direct(int ldo)
+{
+	struct max8893 *max8893 = client_8893data_p;
+	int value, shift;
+
+	if((ldo < MAX8893_LDO1) || (ldo > MAX8893_BUCK))
+	{
+		printk("ERROR: Invalid argument passed\n");
+		return -EINVAL;
+	}
+
+	DBG("func =%s called for regulator = %d\n",__func__,ldo);
+
+    //Thomas Ryu 20100409
+    //(MSB)EBUK:1, ELS:X,ELDO1:0,ELDO2:0,ELDO3:X,ELDO4:0,ELDO5:0,EUSB:X(LSB)
+    if(ldo == MAX8893_BUCK)
+    {
+      shift = 7;
+    }
+    else
+    {
+      shift = 6 - ldo;
+    }
+
+	value = max8893_read_reg(max8893, MAX8893_REG_ONOFF);
+	value |= (1 << shift);
+	max8893_write_reg(max8893, value, MAX8893_REG_ONOFF);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(max8893_ldo_enable_direct);
+
+int max8893_ldo_disable_direct(int ldo)
+{
+	struct max8893 *max8893 = client_8893data_p;
+	int value, shift;
+
+	if((ldo < MAX8893_LDO1) || (ldo > MAX8893_BUCK))
+	{
+		printk("ERROR: Invalid argument passed\n");
+		return -EINVAL;
+	}
+
+	DBG("func =%s called for regulator = %d\n",__func__,ldo);
+
+
+    //Thomas Ryu 20100409
+    //(MSB)EBUK:1, ELS:X,ELDO1:0,ELDO2:0,ELDO3:X,ELDO4:0,ELDO5:0,EUSB:X(LSB)
+    if(ldo == MAX8893_BUCK)
+    {
+      shift = 7;
+    }
+    else
+    {
+      shift = 6 - ldo;
+    }
+
+	value = max8893_read_reg(max8893, MAX8893_REG_ONOFF);
+	value &= ~(1 << shift);
+	max8893_write_reg(max8893, value, MAX8893_REG_ONOFF);
+
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(max8893_ldo_disable_direct);
+
 
 static int max8893_onoff(struct regulator_dev *rdev, bool enable)
 {
@@ -291,7 +454,19 @@ static int __devinit max8893_probe(struct i2c_client *client,
 		}
 	}
 
+	max8893_i2c_read(client, MAX8893_REG_ONOFF, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_DISCHARGE, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LSTIME, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_DVSRAMP, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_BUCK, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LDO1, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LDO2, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LDO3, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LDO4, (u8 *) &ret);
+	max8893_i2c_read(client, MAX8893_REG_LDO5, (u8 *) &ret);
+
 	i2c_set_clientdata(client, max8893);
+	client_8893data_p = max8893; // store 8893 client data to be used later
 	dev_info(&client->dev, "Maxim 8893 regulator driver loaded\n");
 	return 0;
 
