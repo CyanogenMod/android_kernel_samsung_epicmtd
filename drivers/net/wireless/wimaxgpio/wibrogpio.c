@@ -363,7 +363,7 @@ swmxdev_release (struct inode * inode, struct file * file)
 }
 
 static int
-swmxdev_ioctl (struct inode * inode, struct file * file, u_int cmd, u_long arg)
+swmxdev_ioctl (struct file *file, u32 cmd, unsigned long arg)
 {
 	int ret = 0;
 	
@@ -495,7 +495,7 @@ static struct file_operations swmx_fops = {
 	owner:		THIS_MODULE,
 	open:		swmxdev_open,
 	release:	swmxdev_release,
-	ioctl:		swmxdev_ioctl,
+	unlocked_ioctl:		swmxdev_ioctl,
 	read:		swmxdev_read,
 	write:		swmxdev_write,
 };
