@@ -196,6 +196,9 @@ static int ext_cd_cleanup_hsmmc##num(void (*notify_func)( \
 	return 0; \
 }
 
+#ifdef CONFIG_S3C_DEV_HSMMC
+DEFINE_MMC_CARD_NOTIFIER(0)
+#endif
 #ifdef CONFIG_S3C_DEV_HSMMC1
 DEFINE_MMC_CARD_NOTIFIER(1)
 #endif
@@ -214,6 +217,10 @@ void sdhci_s3c_force_presence_change(struct platform_device *pdev)
 {
 	void (*notify_func)(struct platform_device *, int state) = NULL;
 	mutex_lock(&notify_lock);
+#ifdef CONFIG_S3C_DEV_HSMMC
+	if (pdev == &s3c_device_hsmmc0)
+		notify_func = hsmmc0_notify_func;
+#endif
 #ifdef CONFIG_S3C_DEV_HSMMC1
 	if (pdev == &s3c_device_hsmmc1)
 		notify_func = hsmmc1_notify_func;
@@ -240,6 +247,12 @@ void s3c_sdhci_set_platdata(void)
 #if defined(CONFIG_S3C_DEV_HSMMC)
 	if (machine_is_herring()) { /* TODO: move to mach-herring.c */
 		hsmmc0_platdata.cd_type = S3C_SDHCI_CD_PERMANENT;
+	}
+	if (machine_is_victory()) {
+		hsmmc0_platdata.cd_type = S3C_SDHCI_CD_EXTERNAL;
+		hsmmc0_platdata.ext_cd_init = ext_cd_init_hsmmc0;
+		hsmmc0_platdata.ext_cd_cleanup = ext_cd_cleanup_hsmmc0;
+		hsmmc0_platdata.built_in = 1;
 	}
 	s3c_sdhci0_set_platdata(&hsmmc0_platdata);
 #endif
