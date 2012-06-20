@@ -144,10 +144,31 @@ int mmc_io_rw_extended(struct mmc_card *card, int write, unsigned fn,
 	cmd.arg |= fn << 28;
 	cmd.arg |= incr_addr ? 0x04000000 : 0x00000000;
 	cmd.arg |= addr << 9;
-	if (blocks == 1 && blksz <= 512)
-		cmd.arg |= (blksz == 512) ? 0 : blksz;	/* byte mode */
+
+#if defined (CONFIG_MACH_VICTORY)
+	// [Yagya for Victory WiMAX 20100208 WiMAX Channel 0. Single Block Mode or Byte mode ..
+	if((card->host->index == 0) && (write==1)) { //sangam dbg : Setting only for Wimax channel0
+		if (blocks == 1 && blksz == 512)
+			cmd.arg |= 0x08000000 | blocks;		/* block mode */
+	//	if (blocks == 1 && blksz <= 512)
+		if (blocks == 1 && blksz < 512)
+			cmd.arg |= (blksz == 512) ? 0 : blksz;	/* byte mode */
+		else
+			cmd.arg |= 0x08000000 | blocks;		/* block mode */
+	}
 	else
-		cmd.arg |= 0x08000000 | blocks;		/* block mode */
+	{
+#endif
+		if (blocks == 1 && blksz <= 512)
+			cmd.arg |= (blksz == 512) ? 0 : blksz;	/* byte mode */
+		else
+			cmd.arg |= 0x08000000 | blocks;		/* block mode */
+
+#if defined (CONFIG_MACH_VICTORY)
+	}
+#endif
+	// Yagya for Victory WiMAX 20100208]
+
 	cmd.flags = MMC_RSP_SPI_R5 | MMC_RSP_R5 | MMC_CMD_ADTC;
 
 	data.blksz = blksz;
