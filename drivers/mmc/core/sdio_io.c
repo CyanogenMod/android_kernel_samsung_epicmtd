@@ -316,7 +316,19 @@ static int sdio_io_rw_ext_helper(struct sdio_func *func, int write,
 		while (remainder > func->cur_blksize) {
 			unsigned blocks;
 
+#if defined (CONFIG_MACH_VICTORY)
+			// [ Yagya for Victory WiMAX 20100208 WiMAX Channel 0ç²¾ Single Block Mode or Byte mode ç´«é~A~B
+                        // tsh.park 20101001 index changed to 0 from 3
+                        if((func->card->host->index == 0) && (write==1))// sangam dbg : Only for Wimax channel 0
+                                blocks = 1;
+                        else
+                                blocks = remainder / func->cur_blksize;
+
+                        // Yagya for Victory WiMAX 20100208]
+#else
+
 			blocks = remainder / func->cur_blksize;
+#endif
 			if (blocks > max_blocks)
 				blocks = max_blocks;
 			size = blocks * func->cur_blksize;
