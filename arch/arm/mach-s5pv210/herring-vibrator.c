@@ -25,11 +25,16 @@
 
 #include <asm/mach-types.h>
 
+#include <linux/device.h>
+#include <linux/miscdevice.h>
+
 #include <../../../drivers/staging/android/timed_output.h>
 
 #include <mach/gpio-herring.h>
 
 #define GPD0_TOUT_1		2 << 4
+
+#define VIBE_TUNING
 
 #define PWM_PERIOD		(89284 / 2)
 #define PWM_DUTY		(87280 / 2)
@@ -93,6 +98,41 @@ static struct timed_output_dev to_dev = {
 	.enable		= herring_vibrator_enable,
 };
 
+#ifdef VIBE_TUNING
+static ssize_t vibeTimer_show(struct device *dev,
+						struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "[VibeTonz] example: echo 2000 >vibeTimer \n");
+}
+static ssize_t vibeTimer_store(struct device *dev,
+						struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	unsigned long val;
+	int res;
+	if ((res = strict_strtoul(buf, 10, &val)) < 0)
+		return res;
+	if (val > 0) {
+		herring_vibrator_enable((struct timed_output_dev *)dev, (int)val);
+	} else {
+		herring_vibrator_enable((struct timed_output_dev *)dev, (int)val);
+	}
+	return count;
+}
+static DEVICE_ATTR(vibeTimer, S_IRUGO | S_IWUSR, vibeTimer_show, vibeTimer_store);
+static struct attribute *vibrator_attributes[] = {
+	&dev_attr_vibeTimer.attr,
+	NULL
+};
+static struct attribute_group vibrator_group = {
+	.attrs = vibrator_attributes,
+};
+static struct miscdevice vibrator_device = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = "herring-vibrator",
+};
+#endif /* VIBE_TUNING */
+
 static enum hrtimer_restart herring_vibrator_timer_func(struct hrtimer *timer)
 {
 	schedule_work(&vibdata.work);
@@ -127,6 +167,16 @@ static int __init herring_init_vibrator(void)
 		ret = PTR_ERR(vibdata.pwm_dev);
 		goto err_pwm_req;
 	}
+
+#ifdef VIBE_TUNING
+	misc_register(&vibrator_device);
+	if (sysfs_create_group(&vibrator_device.this_device->kobj,
+			       &vibrator_group) < 0) {
+		printk("%s sysfs_create_group fail\n", __FUNCTION__);
+		pr_err("Failed to create sysfs group for device (%s)!\n",
+		       vibrator_device.name);
+	}
+#endif
 
 	wake_lock_init(&vibdata.wklock, WAKE_LOCK_SUSPEND, "vibrator");
 	mutex_init(&vibdata.lock);
