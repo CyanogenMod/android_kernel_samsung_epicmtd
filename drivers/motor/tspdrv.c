@@ -217,12 +217,36 @@ static int resume(struct platform_device *pdev);
 struct class *vibetonz_class;
 EXPORT_SYMBOL(vibetonz_class);
 
-struct device *immTest_test;
-EXPORT_SYMBOL(immTest_test);
+struct device *vibeTest_test;
+EXPORT_SYMBOL(vibeTest_test);
 
 extern long int freq_count;
+static ssize_t vibeTimer_show(struct device *dev,
+						struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "[VibeTonz] example: echo 2000 >vibeTimer \n");
+}
+static ssize_t vibeTimer_store(struct device *dev,
+						struct device_attribute *attr,
+						const char *buf, size_t count)
+{
+	unsigned long val;
+	int res;
+	if ((res = strict_strtoul(buf, 10, &val)) < 0)
+		return res;
+	VibeDebug("vibeTimer value:%lu \n", val);
+	if (val > 0) {
+		VibeDebug("enable \n");
+		enable_vibetonz_from_user((struct timed_output_dev *)dev, (int)val);
+	} else {
+		VibeDebug("disable \n");
+		enable_vibetonz_from_user((struct timed_output_dev *)dev, (int)val);
+	}
+	return count;
+}
+static DEVICE_ATTR(vibeTimer, S_IRUGO | S_IWUSR, vibeTimer_show, vibeTimer_store);
 
-static ssize_t immTestForce_show(struct device *dev,
+static ssize_t vibeForce_show(struct device *dev,
 						struct device_attribute *attr, char *buf)
 {
 	/*
@@ -234,25 +258,27 @@ static ssize_t immTestForce_show(struct device *dev,
 	 *  5th (high):   { 112,  98, -125 }
 	 *  6th (full):   { 123, 121, -125 }
 	 */
-	return snprintf(buf, PAGE_SIZE, "[VibeTonz] example: echo 121 >immTestForce \n");
+	return snprintf(buf, PAGE_SIZE, "[VibeTonz] example: echo 121 >vibeForce \n");
 }
-static ssize_t immTestForce_store(struct device *dev,
+static ssize_t vibeForce_store(struct device *dev,
 						struct device_attribute *attr,
 						const char *buf, size_t count)
 {
-	char *after;
-	unsigned long value = simple_strtoul(buf, &after, 10);
-	VibeDebug("immTestForce value:%lu \n", val);
-	if (value > 0) {
+	unsigned long val;
+	int res;
+	if ((res = strict_strtoul(buf, 10, &val)) < 0)
+		return res;
+	VibeDebug("vibeForce value:%lu \n", val);
+	if (val > 0) {
 		VibeDebug("enable \n");
-		ImmVibeSPI_ForceOut_Set(0, value);
+		ImmVibeSPI_ForceOut_Set(0, val);
 	} else {
 		VibeDebug("disable \n");
-		ImmVibeSPI_ForceOut_AmpDisable(value);
+		ImmVibeSPI_ForceOut_AmpDisable(val);
 	}
 	return count;
 }
-static DEVICE_ATTR(immTestForce, S_IRUGO | S_IWUSR, immTestForce_show, immTestForce_store);
+static DEVICE_ATTR(vibeForce, S_IRUGO | S_IWUSR, vibeForce_show, vibeForce_store);
 #endif /* VIBE_TUNING */
 
 static int vibrator_probe(struct platform_device *pdev)
@@ -298,13 +324,16 @@ static int vibrator_probe(struct platform_device *pdev)
 	vibetonz_class = class_create(THIS_MODULE, "vibetonz");
 	if (IS_ERR(vibetonz_class))
 		pr_err("Failed to create class(vibetonz)!\n");
-	// ---------- device creation at '/sys/class/vibetonz/immTest/'------------------------------
-	immTest_test = device_create(vibetonz_class, NULL, 0, NULL, "immTest");
-	if (IS_ERR(immTest_test))
-		pr_err("Failed to create device(immTest)!\n");
-	// ---------- file creation at '/sys/class/vibetonz/immTest/immTestForce'------------------------------
-	if (device_create_file(immTest_test, &dev_attr_immTestForce) < 0)
-		pr_err("Failed to create device file(%s)!\n", dev_attr_immTestForce.attr.name);
+	// ---------- device creation at '/sys/class/vibetonz/vibeTest/'------------------------------
+	vibeTest_test = device_create(vibetonz_class, NULL, 0, NULL, "vibeTest");
+	if (IS_ERR(vibeTest_test))
+		pr_err("Failed to create device(vibeTest)!\n");
+	// ---------- file creation at '/sys/class/vibetonz/vibeTest/vibeTimer'------------------------------
+	if (device_create_file(vibeTest_test, &dev_attr_vibeTimer) < 0)
+		pr_err("Failed to create device file(%s)!\n", dev_attr_vibeTimer.attr.name);
+	// ---------- file creation at '/sys/class/vibetonz/vibeTest/vibeForce'------------------------------
+	if (device_create_file(vibeTest_test, &dev_attr_vibeForce) < 0)
+		pr_err("Failed to create device file(%s)!\n", dev_attr_vibeForce.attr.name);
 #endif
 	vibetonz_start();
 	return 0;
