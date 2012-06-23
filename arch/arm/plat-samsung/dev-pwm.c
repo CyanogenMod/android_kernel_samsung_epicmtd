@@ -19,6 +19,12 @@
 
 #include <mach/irqs.h>
 
+#ifdef CONFIG_MACH_VICTORY
+#include <mach/gpio.h>
+#include <mach/gpio-bank.h>
+#include <mach/pwm-victory-data.h>
+#endif
+
 #include <plat/devs.h>
 
 #define TIMER_RESOURCE_SIZE (1)
@@ -38,11 +44,28 @@
 	.num_resources	= TIMER_RESOURCE_SIZE,		\
 	.resource	= TIMER_RESOURCE(_tmr_no, _irq),	\
 
+#define DEFINE_VICTORY_TIMER(_tmr_no, _irq, _plat_data) \
+	.name = "s3c24xx-pwm", \
+	.id = _tmr_no, \
+	.num_resources = TIMER_RESOURCE_SIZE, \
+	.resource = TIMER_RESOURCE(_tmr_no, _irq), \
+	.dev = { \
+		.platform_data = _plat_data, \
+	}
+
 /*
  * since we already have an static mapping for the timer,
  * we do not bother setting any IO resource for the base.
  */
-
+#ifdef CONFIG_MACH_VICTORY
+struct platform_device s3c_device_timer[] = {
+	[0] = { DEFINE_VICTORY_TIMER(0, IRQ_TIMER0, &victory_pwm_data[0]) },
+	[1] = { DEFINE_VICTORY_TIMER(1, IRQ_TIMER1, &victory_pwm_data[1]) },
+	[2] = { DEFINE_VICTORY_TIMER(2, IRQ_TIMER2, &victory_pwm_data[2]) },
+	[3] = { DEFINE_VICTORY_TIMER(3, IRQ_TIMER3, &victory_pwm_data[3]) },
+	[4] = { DEFINE_VICTORY_TIMER(4, IRQ_TIMER4, &victory_pwm_data[4]) },
+};
+#else
 struct platform_device s3c_device_timer[] = {
 	[0] = { DEFINE_S3C_TIMER(0, IRQ_TIMER0) },
 	[1] = { DEFINE_S3C_TIMER(1, IRQ_TIMER1) },
@@ -50,4 +73,5 @@ struct platform_device s3c_device_timer[] = {
 	[3] = { DEFINE_S3C_TIMER(3, IRQ_TIMER3) },
 	[4] = { DEFINE_S3C_TIMER(4, IRQ_TIMER4) },
 };
+#endif
 EXPORT_SYMBOL(s3c_device_timer);

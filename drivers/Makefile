@@ -125,4 +125,6 @@ obj-y				+= param/
 #common clk code
 obj-y				+= clk/
 
+obj-$(CONFIG_VIBETONZ)	+= motor/
+
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
