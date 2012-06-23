@@ -43,7 +43,7 @@
 #define VIBE_OUTPUT_SAMPLE_SIZE             50  /* DO NOT CHANGE - maximum number of samples */
 
 #define VIBE_TUNING
-#define VIBE_DEBUG
+//#define VIBE_DEBUG
 
 #ifdef VIBE_DEBUG
 #define VibeDebug(args...) {{ printk(KERN_DEBUG "\x1b[1;33m[VibeTonz]\x1b[0m ");printk(args); }}
