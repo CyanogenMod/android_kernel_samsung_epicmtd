@@ -44,6 +44,8 @@
 #include <mach/gpio.h>
 #include <mach/gpio-victory.h>
 #include <mach/gpio-victory-settings.h>
+#include <mach/gpio-bank.h>
+#include <mach/pwm-victory-data.h>
 #include <mach/adc.h>
 #include <mach/param.h>
 #include <mach/system.h>
@@ -2487,6 +2489,21 @@ static void gp2a_gpio_init(void)
 		printk(KERN_ERR "Failed to request gpio gp2a power supply.\n");
 }
 
+static void pwm_gpio_init(void)
+{
+	int i = 0;
+	int ret = 0;
+	for (i = 0; i < ARRAY_SIZE(victory_pwm_data); i++) {
+		if (gpio_is_valid(victory_pwm_data[i].gpio_no)) {
+			ret = gpio_request(victory_pwm_data[i].gpio_no, victory_pwm_data[i].gpio_name);
+			if (ret)
+				printk(KERN_ERR "failed to get GPIO for PWM0\n");
+			s3c_gpio_cfgpin(victory_pwm_data[i].gpio_no, victory_pwm_data[i].gpio_set_value);
+			gpio_free(victory_pwm_data[i].gpio_no);
+		}
+	}
+}
+
 static struct i2c_board_info i2c_devs11[] __initdata = {
 	{
 		I2C_BOARD_INFO("gp2a", (0x88 >> 1)),
@@ -3405,6 +3422,7 @@ static void __init victory_machine_init(void)
 	gp2a_gpio_init();
 	i2c_register_board_info(11, i2c_devs11, ARRAY_SIZE(i2c_devs11));
 
+	pwm_gpio_init();
 	/* MAX8893 PMIC */
 	i2c_register_board_info(12, i2c_devs12, ARRAY_SIZE(i2c_devs12));
 
