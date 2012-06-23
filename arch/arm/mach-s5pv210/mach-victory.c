@@ -1107,13 +1107,11 @@ void lcd_cfg_gpio_early_suspend(void)
 		gpio_set_value(S5PV210_GPF3(i), 0);
 	}
 
-#if 0
-	/* drive strength to max */
-	writel(0xffffffff, S5P_VA_GPIO + 0x12c); /* GPF0DRV */
-	writel(0xffffffff, S5P_VA_GPIO + 0x14c); /* GPF1DRV */
-	writel(0xffffffff, S5P_VA_GPIO + 0x16c); /* GPF2DRV */
-	writel(0x000000ff, S5P_VA_GPIO + 0x18c); /* GPF3DRV */
-#endif
+	/* drive strength to min */
+	writel(0x00000000, S5P_VA_GPIO + 0x12c); /* GPF0DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x14c); /* GPF1DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x16c); /* GPF2DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x18c); /* GPF3DRV */
 
 	/* LCD_RST */
 	s3c_gpio_cfgpin(GPIO_MLCD_RST, S3C_GPIO_OUTPUT);
