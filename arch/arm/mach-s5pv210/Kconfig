@@ -316,6 +316,11 @@ config WIFI_CONTROL_FUNC
        help
          Enables Power/Reset/Carddetect function abstraction
 
+config DVFS_LIMIT
+	bool "DVFS limit"
+	depends on CPU_FREQ
+	default n
+
 config POKE_REC_BOOT_MAGIC
 	bool "Flag stage1 init to boot recovery on reboot(..., \"recovery\")"
 	help

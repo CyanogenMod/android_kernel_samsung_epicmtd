@@ -1,7 +1,7 @@
 /* linux/arch/arm/mach-s5pv210/mach-victory.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
- *		http://www.samsung.com/
+ *  http://www.samsung.com/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -44,6 +44,8 @@
 #include <mach/gpio.h>
 #include <mach/gpio-victory.h>
 #include <mach/gpio-victory-settings.h>
+#include <mach/gpio-bank.h>
+#include <mach/pwm-victory-data.h>
 #include <mach/adc.h>
 #include <mach/param.h>
 #include <mach/system.h>
@@ -103,10 +105,9 @@
 extern void kernel_sec_clear_cable_attach(void);
 extern void kernel_sec_set_cable_attach(void);
 #endif
-#define KEY_TOUCH_INT                  S5PV210_GPJ3(3)
+#define KEY_TOUCH_INT  S5PV210_GPJ3(3)
 
 #include "aries.h"
-
 
 struct class *sec_class;
 EXPORT_SYMBOL(sec_class);
@@ -127,20 +128,19 @@ void (*sec_get_param_value)(int idx, void *value);
 EXPORT_SYMBOL(sec_get_param_value);
 #define IRQ_TOUCH_INT (IRQ_EINT_GROUP18_BASE+5)
 
+#define KERNEL_REBOOT_MASK    0xFFFFFFFF
+#define REBOOT_MODE_FAST_BOOT 7
 
-#define KERNEL_REBOOT_MASK      0xFFFFFFFF
-#define REBOOT_MODE_FAST_BOOT		7
+#define PREALLOC_WLAN_SEC_NUM        4
+#define PREALLOC_WLAN_BUF_NUM        160
+#define PREALLOC_WLAN_SECTION_HEADER 24
 
-#define PREALLOC_WLAN_SEC_NUM		4
-#define PREALLOC_WLAN_BUF_NUM		160
-#define PREALLOC_WLAN_SECTION_HEADER	24
+#define WLAN_SECTION_SIZE_0 (PREALLOC_WLAN_BUF_NUM * 128)
+#define WLAN_SECTION_SIZE_1 (PREALLOC_WLAN_BUF_NUM * 128)
+#define WLAN_SECTION_SIZE_2 (PREALLOC_WLAN_BUF_NUM * 512)
+#define WLAN_SECTION_SIZE_3 (PREALLOC_WLAN_BUF_NUM * 1024)
 
-#define WLAN_SECTION_SIZE_0	(PREALLOC_WLAN_BUF_NUM * 128)
-#define WLAN_SECTION_SIZE_1	(PREALLOC_WLAN_BUF_NUM * 128)
-#define WLAN_SECTION_SIZE_2	(PREALLOC_WLAN_BUF_NUM * 512)
-#define WLAN_SECTION_SIZE_3	(PREALLOC_WLAN_BUF_NUM * 1024)
-
-#define WLAN_SKB_BUF_NUM	17
+#define WLAN_SKB_BUF_NUM    17
 
 static struct sk_buff *wlan_static_skb[WLAN_SKB_BUF_NUM];
 
@@ -194,7 +194,7 @@ static int victory_notifier_call(struct notifier_block *this,
 		else
 			mode = REBOOT_MODE_NONE;
 
-#ifdef CONFIG_KERNEL_DEBUG_SEC 
+#ifdef CONFIG_KERNEL_DEBUG_SEC
 		//etinum.factory.reboot disable uart msg in bootloader for
 		// factory reset 2nd ack
 		// Added for Froyo Atlas
@@ -219,9 +219,8 @@ static struct notifier_block victory_reboot_notifier = {
 
 static ssize_t hwrev_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-        return sprintf(buf, "%x\n", HWREV);
+	return sprintf(buf, "%x\n", HWREV);
 }
-
 static DEVICE_ATTR(hwrev, S_IRUGO, hwrev_show, NULL);
 
 static void gps_gpio_init(void)
@@ -233,15 +232,15 @@ static void gps_gpio_init(void)
 		pr_err("Failed to create device(gps)!\n");
 		goto err;
 	}
-        if (device_create_file(gps_dev, &dev_attr_hwrev) < 0)
-                pr_err("Failed to create device file(%s)!\n",
-                       dev_attr_hwrev.attr.name);
-	gpio_request(GPIO_GPS_nRST, "GPS_nRST");	/* XMMC3CLK */
+	if (device_create_file(gps_dev, &dev_attr_hwrev) < 0)
+		pr_err("Failed to create device file(%s)!\n",
+					dev_attr_hwrev.attr.name);
+	gpio_request(GPIO_GPS_nRST, "GPS_nRST"); /* XMMC3CLK */
 	s3c_gpio_setpull(GPIO_GPS_nRST, S3C_GPIO_PULL_NONE);
 	s3c_gpio_cfgpin(GPIO_GPS_nRST, S3C_GPIO_OUTPUT);
 	gpio_direction_output(GPIO_GPS_nRST, 1);
 
-	gpio_request(GPIO_GPS_PWR_EN, "GPS_PWR_EN");	/* XMMC3CLK */
+	gpio_request(GPIO_GPS_PWR_EN, "GPS_PWR_EN"); /* XMMC3CLK */
 	s3c_gpio_setpull(GPIO_GPS_PWR_EN, S3C_GPIO_PULL_NONE);
 	s3c_gpio_cfgpin(GPIO_GPS_PWR_EN, S3C_GPIO_OUTPUT);
 	gpio_direction_output(GPIO_GPS_PWR_EN, 0);
@@ -253,7 +252,7 @@ static void gps_gpio_init(void)
 	gpio_export_link(gps_dev, "GPS_nRST", GPIO_GPS_nRST);
 	gpio_export_link(gps_dev, "GPS_PWR_EN", GPIO_GPS_PWR_EN);
 
- err:
+err:
 	return;
 }
 
@@ -296,50 +295,50 @@ static void victory_switch_init(void)
 };
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
-#define S5PV210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
-				 S3C2410_UCON_RXILEVEL |	\
-				 S3C2410_UCON_TXIRQMODE |	\
-				 S3C2410_UCON_RXIRQMODE |	\
-				 S3C2410_UCON_RXFIFO_TOI |	\
-				 S3C2443_UCON_RXERR_IRQEN)
+#define S5PV210_UCON_DEFAULT (S3C2410_UCON_TXILEVEL | \
+					S3C2410_UCON_RXILEVEL | \
+					S3C2410_UCON_TXIRQMODE | \
+					S3C2410_UCON_RXIRQMODE | \
+					S3C2410_UCON_RXFIFO_TOI | \
+					S3C2443_UCON_RXERR_IRQEN)
 
-#define S5PV210_ULCON_DEFAULT	S3C2410_LCON_CS8
+#define S5PV210_ULCON_DEFAULT S3C2410_LCON_CS8
 
-#define S5PV210_UFCON_DEFAULT	(S3C2410_UFCON_FIFOMODE |	\
-				 S5PV210_UFCON_TXTRIG4 |	\
-				 S5PV210_UFCON_RXTRIG4)
+#define S5PV210_UFCON_DEFAULT (S3C2410_UFCON_FIFOMODE | \
+					S5PV210_UFCON_TXTRIG4 | \
+					S5PV210_UFCON_RXTRIG4)
 
 static struct s3c2410_uartcfg victory_uartcfgs[] __initdata = {
 	{
-		.hwport		= 0,
-		.flags		= 0,
-		.ucon		= S5PV210_UCON_DEFAULT,
-		.ulcon		= S5PV210_ULCON_DEFAULT,
-		.ufcon		= S5PV210_UFCON_DEFAULT,
-		.wake_peer	= aries_bt_uart_wake_peer,
+		.hwport = 0,
+		.flags = 0,
+		.ucon = S5PV210_UCON_DEFAULT,
+		.ulcon = S5PV210_ULCON_DEFAULT,
+		.ufcon = S5PV210_UFCON_DEFAULT,
+		.wake_peer = aries_bt_uart_wake_peer,
 	},
 	{
-		.hwport		= 1,
-		.flags		= 0,
-		.ucon		= S5PV210_UCON_DEFAULT,
-		.ulcon		= S5PV210_ULCON_DEFAULT,
-		.ufcon		= S5PV210_UFCON_DEFAULT,
+		.hwport = 1,
+		.flags = 0,
+		.ucon = S5PV210_UCON_DEFAULT,
+		.ulcon = S5PV210_ULCON_DEFAULT,
+		.ufcon = S5PV210_UFCON_DEFAULT,
 	},
 #ifndef CONFIG_FIQ_DEBUGGER
 	{
-		.hwport		= 2,
-		.flags		= 0,
-		.ucon		= S5PV210_UCON_DEFAULT,
-		.ulcon		= S5PV210_ULCON_DEFAULT,
-		.ufcon		= S5PV210_UFCON_DEFAULT,
+		.hwport = 2,
+		.flags = 0,
+		.ucon = S5PV210_UCON_DEFAULT,
+		.ulcon = S5PV210_ULCON_DEFAULT,
+		.ufcon = S5PV210_UFCON_DEFAULT,
 	},
 #endif
 	{
-		.hwport		= 3,
-		.flags		= 0,
-		.ucon		= S5PV210_UCON_DEFAULT,
-		.ulcon		= S5PV210_ULCON_DEFAULT,
-		.ufcon		= S5PV210_UFCON_DEFAULT,
+		.hwport = 3,
+		.flags = 0,
+		.ucon = S5PV210_UCON_DEFAULT,
+		.ulcon = S5PV210_ULCON_DEFAULT,
+		.ufcon = S5PV210_UFCON_DEFAULT,
 	},
 };
 
@@ -368,16 +367,16 @@ static struct s3cfb_lcd nt35580 = {
 	},
 };
 
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0 (11264 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1 (1024 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2 (11264 * SZ_1K)
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (11264 * SZ_1K) // 11MB
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (11264 * SZ_1K) // 11MB
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (800 * 480 * 4 * \
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC0 (11264 * SZ_1K)
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC1 (1024 * SZ_1K)
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMC2 (11264 * SZ_1K)
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC0 (11264 * SZ_1K) // 11MB
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_MFC1 (11264 * SZ_1K) // 11MB
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_FIMD (800 * 480 * 4 * \
 		(CONFIG_FB_S3C_NR_BUFFERS + \
 		(CONFIG_FB_S3C_NUM_OVLY_WIN * \
 		 CONFIG_FB_S3C_NUM_BUF_OVLY_WIN)))
-#define  S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG (5012 * SZ_1K)
+#define S5PV210_VIDEO_SAMSUNG_MEMSIZE_JPEG (5012 * SZ_1K)
 static struct s5p_media_device victory_media_devs[] = {
 	[0] = {
 		.id = S5P_MDEV_FIMD,
@@ -433,31 +432,31 @@ static struct s5p_media_device victory_media_devs[] = {
 #ifdef CONFIG_CPU_FREQ
 static struct s5pv210_cpufreq_voltage smdkc110_cpufreq_volt[] = {
 	{
-		.freq	= 1000000,
-		.varm	= 1275000,
-		.vint	= 1100000,
+		.freq = 1000000,
+		.varm = 1275000,
+		.vint = 1100000,
 	}, {
-		.freq	=  800000,
-		.varm	= 1200000,
-		.vint	= 1100000,
+		.freq =  800000,
+		.varm = 1200000,
+		.vint = 1100000,
 	}, {
-		.freq	=  400000,
-		.varm	= 1050000,
-		.vint	= 1100000,
+		.freq =  400000,
+		.varm = 1050000,
+		.vint = 1100000,
 	}, {
-		.freq	=  200000,
-		.varm	=  950000,
-		.vint	= 1100000,
+		.freq =  200000,
+		.varm =  950000,
+		.vint = 1100000,
 	}, {
-		.freq	=  100000,
-		.varm	=  950000,
-		.vint	= 1000000,
+		.freq =  100000,
+		.varm =  950000,
+		.vint = 1000000,
 	},
 };
 
 static struct s5pv210_cpufreq_data smdkc110_cpufreq_plat = {
-	.volt	= smdkc110_cpufreq_volt,
-	.size	= ARRAY_SIZE(smdkc110_cpufreq_volt),
+	.volt = smdkc110_cpufreq_volt,
+	.size = ARRAY_SIZE(smdkc110_cpufreq_volt),
 };
 #endif
 
@@ -466,11 +465,11 @@ static struct regulator_consumer_supply ldo3_consumer[] = {
 };
 
 static struct regulator_consumer_supply ldo5_consumer[] = {
-	{	.supply	= "vga_avdd", },
+	{ .supply = "vga_avdd", },
 };
 
 static struct regulator_consumer_supply ldo7_consumer[] = {
-	{	.supply	= "vlcd", },
+	{ .supply = "vlcd", },
 };
 
 static struct regulator_consumer_supply ldo8_consumer[] = {
@@ -478,313 +477,311 @@ static struct regulator_consumer_supply ldo8_consumer[] = {
 };
 
 static struct regulator_consumer_supply ldo11_consumer[] = {
-	{	.supply	= "cam_af", },
+	{ .supply = "cam_af", },
 };
 
 static struct regulator_consumer_supply ldo12_consumer[] = {
-	{	.supply	= "cam_sensor", },
+	{ .supply = "cam_sensor", },
 };
 
 static struct regulator_consumer_supply ldo13_consumer[] = {
-	{	.supply	= "vga_vddio", },
+	{ .supply = "vga_vddio", },
 };
 
 static struct regulator_consumer_supply ldo14_consumer[] = {
-	{	.supply	= "vga_dvdd", },
+	{ .supply = "vga_dvdd", },
 };
 
 static struct regulator_consumer_supply ldo15_consumer[] = {
-	{	.supply	= "cam_isp_host", },
+	{ .supply = "cam_isp_host", },
 };
 
-
 static struct regulator_consumer_supply ldo17_consumer[] = {
-	{	.supply	= "vcc_lcd", },
+	{ .supply = "vcc_lcd", },
 };
 
 static struct regulator_consumer_supply buck1_consumer[] = {
-	{	.supply	= "vddarm", },
+	{ .supply = "vddarm", },
 };
 
 static struct regulator_consumer_supply buck2_consumer[] = {
-	{	.supply	= "vddint", },
+	{ .supply = "vddint", },
 };
 
 static struct regulator_consumer_supply buck4_consumer[] = {
-	{	.supply	= "cam_isp_core", },
+	{.supply = "cam_isp_core", },
 };
 
 static struct regulator_consumer_supply esafeout2_consumer[] = {
-        {       .supply = "esafeout2", },
+	{ .supply = "esafeout2", },
 };
 
 static struct regulator_init_data victory_ldo2_data = {
-	.constraints	= {
-		.name		= "VALIVE_1.2V",
-		.min_uV		= 1200000,
-		.max_uV		= 1200000,
-		.apply_uV	= 1,
-		.always_on	= 1,
-		.state_mem	= {
+	.constraints = {
+		.name = "VALIVE_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.apply_uV = 1,
+		.always_on = 1,
+		.state_mem = {
 			.enabled = 1,
 		},
 	},
 };
 
 static struct regulator_init_data victory_ldo3_data = {
-	.constraints	= {
-		.name		= "VUSB_1.1V",
-		.min_uV		= 1100000,
-		.max_uV		= 1100000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "VUSB_1.1V",
+		.min_uV = 1100000,
+		.max_uV = 1100000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo3_consumer),
-	.consumer_supplies	= ldo3_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo3_consumer),
+	.consumer_supplies = ldo3_consumer,
 };
 
 static struct regulator_init_data victory_ldo4_data = {
-	.constraints	= {
-		.name		= "VADC_3.3V",
-		.min_uV		= 3300000,
-		.max_uV		= 3300000,
-		.apply_uV	= 1,
-		.always_on	= 0,
+	.constraints = {
+		.name = "VADC_3.3V",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.apply_uV = 1,
+		.always_on = 0,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
 };
 
 static struct regulator_init_data victory_ldo5_data = {
-	.constraints	= {
-		.name		= "CAM_SENSOR_CORE_1.8V",
-		.min_uV		= 1800000,
-		.max_uV		= 1800000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "CAM_SENSOR_CORE_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo5_consumer),
-	.consumer_supplies	= ldo5_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo5_consumer),
+	.consumer_supplies = ldo5_consumer,
 };
 
 static struct regulator_init_data victory_ldo7_data = {
-	.constraints	= {
-		.name		= "VLCD_1.8V",
-		.min_uV		= 1800000,
-		.max_uV		= 1800000,
-		.apply_uV	= 1,
-		.always_on	= 0,
+	.constraints = {
+		.name = "VLCD_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.always_on = 0,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo7_consumer),
-	.consumer_supplies	= ldo7_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo7_consumer),
+	.consumer_supplies = ldo7_consumer,
 };
 
 static struct regulator_init_data victory_ldo8_data = {
-	.constraints	= {
-		.name		= "VUSB_3.3V",
-		.min_uV		= 3300000,
-		.max_uV		= 3300000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "VUSB_3.3V",
+		.min_uV = 3300000,
+		.max_uV = 3300000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo8_consumer),
-	.consumer_supplies	= ldo8_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo8_consumer),
+	.consumer_supplies = ldo8_consumer,
 };
 
 static struct regulator_init_data victory_ldo9_data = {
-	.constraints	= {
-		.name		= "VCC_2.8V_PDA",
-		.min_uV		= 2800000,
-		.max_uV		= 2800000,
-		.apply_uV	= 1,
-		.always_on	= 1,
+	.constraints = {
+		.name = "VCC_2.8V_PDA",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
+		.always_on = 1,
 	},
 };
 
 static struct regulator_init_data victory_ldo11_data = {
-	.constraints	= {
-		.name		= "CAM_AF_3.0V",
-		.min_uV		= 3000000,
-		.max_uV		= 3000000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "CAM_AF_3.0V",
+		.min_uV = 3000000,
+		.max_uV = 3000000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo11_consumer),
-	.consumer_supplies	= ldo11_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo11_consumer),
+	.consumer_supplies = ldo11_consumer,
 };
 
 static struct regulator_init_data victory_ldo12_data = {
-	.constraints	= {
-		.name		= "CAM_SENSOR_CORE_1.2V",
-		.min_uV		= 1200000,
-		.max_uV		= 1200000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "CAM_SENSOR_CORE_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo12_consumer),
-	.consumer_supplies	= ldo12_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo12_consumer),
+	.consumer_supplies = ldo12_consumer,
 };
 
 static struct regulator_init_data victory_ldo13_data = {
-	.constraints	= {
-		.name		= "VGA_VDDIO_2.8V",
-		.min_uV		= 2800000,
-		.max_uV		= 2800000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "VGA_VDDIO_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo13_consumer),
-	.consumer_supplies	= ldo13_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo13_consumer),
+	.consumer_supplies = ldo13_consumer,
 };
 
 static struct regulator_init_data victory_ldo14_data = {
-	.constraints	= {
-		.name		= "VGA_DVDD_1.8V",
-		.min_uV		= 1800000,
-		.max_uV		= 1800000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "VGA_DVDD_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo14_consumer),
-	.consumer_supplies	= ldo14_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo14_consumer),
+	.consumer_supplies = ldo14_consumer,
 };
 
 static struct regulator_init_data victory_ldo15_data = {
-	.constraints	= {
-		.name		= "CAM_ISP_HOST_2.8V",
-		.min_uV		= 2800000,
-		.max_uV		= 2800000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "CAM_ISP_HOST_2.8V",
+		.min_uV = 2800000,
+		.max_uV = 2800000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo15_consumer),
-	.consumer_supplies	= ldo15_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo15_consumer),
+	.consumer_supplies = ldo15_consumer,
 };
 
 static struct regulator_init_data victory_ldo17_data = {
-	.constraints	= {
-		.name		= "VCC_3.0V_LCD",
-		.min_uV		= 3000000,
-		.max_uV		= 3000000,
-		.apply_uV	= 1,
-		.always_on	= 0,
+	.constraints = {
+		.name = "VCC_3.0V_LCD",
+		.min_uV = 3000000,
+		.max_uV = 3000000,
+		.apply_uV = 1,
+		.always_on = 0,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(ldo17_consumer),
-	.consumer_supplies	= ldo17_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(ldo17_consumer),
+	.consumer_supplies = ldo17_consumer,
 };
 
 static struct regulator_init_data victory_buck1_data = {
-	.constraints	= {
-		.name		= "VDD_ARM",
-		.min_uV		= 750000,
-		.max_uV		= 1500000,
-		.apply_uV	= 1,
-		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
-				  REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
-			.uV	= 1250000,
-			.mode	= REGULATOR_MODE_NORMAL,
+	.constraints = {
+		.name = "VDD_ARM",
+		.min_uV = 750000,
+		.max_uV = 1500000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.uV = 1250000,
+			.mode = REGULATOR_MODE_NORMAL,
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(buck1_consumer),
-	.consumer_supplies	= buck1_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(buck1_consumer),
+	.consumer_supplies = buck1_consumer,
 };
 
 static struct regulator_init_data victory_buck2_data = {
-	.constraints	= {
-		.name		= "VDD_INT",
-		.min_uV		= 750000,
-		.max_uV		= 1500000,
-		.apply_uV	= 1,
-		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
-				  REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
-			.uV	= 1100000,
-			.mode	= REGULATOR_MODE_NORMAL,
+	.constraints = {
+		.name = "VDD_INT",
+		.min_uV = 750000,
+		.max_uV = 1500000,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.uV = 1100000,
+			.mode = REGULATOR_MODE_NORMAL,
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(buck2_consumer),
-	.consumer_supplies	= buck2_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(buck2_consumer),
+	.consumer_supplies = buck2_consumer,
 };
 
 static struct regulator_init_data victory_buck3_data = {
-	.constraints	= {
-		.name		= "VCC_1.8V",
-		.min_uV		= 1800000,
-		.max_uV		= 1800000,
-		.apply_uV	= 1,
-		.always_on	= 0,
+	.constraints = {
+		.name = "VCC_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.apply_uV = 1,
+		.always_on = 0,
 	},
 };
 
 static struct regulator_init_data victory_buck4_data = {
-	.constraints	= {
-		.name		= "CAM_ISP_CORE_1.2V",
-		.min_uV		= 1200000,
-		.max_uV		= 1200000,
-		.apply_uV	= 1,
+	.constraints = {
+		.name = "CAM_ISP_CORE_1.2V",
+		.min_uV = 1200000,
+		.max_uV = 1200000,
+		.apply_uV = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-		.state_mem	= {
+		.state_mem = {
 			.disabled = 1,
 		},
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(buck4_consumer),
-	.consumer_supplies	= buck4_consumer,
+	.num_consumer_supplies = ARRAY_SIZE(buck4_consumer),
+	.consumer_supplies = buck4_consumer,
 };
 
 static struct regulator_init_data victory_esafeout2_data = {
-        .constraints    = {
-                .name           = "ESAFEOUT2",
-                .valid_ops_mask = REGULATOR_CHANGE_STATUS,
-        },
-
-        .num_consumer_supplies  = ARRAY_SIZE(esafeout2_consumer),
-        .consumer_supplies      = esafeout2_consumer,
+	.constraints = {
+		.name = "ESAFEOUT2",
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(esafeout2_consumer),
+	.consumer_supplies = esafeout2_consumer,
 };
 static struct max8998_regulator_data victory_regulators[] = {
-	{ MAX8998_LDO2,  &victory_ldo2_data },
-	{ MAX8998_LDO3,  &victory_ldo3_data },
-	{ MAX8998_LDO4,  &victory_ldo4_data },
-	{ MAX8998_LDO5,  &victory_ldo5_data },
-	{ MAX8998_LDO7,  &victory_ldo7_data },
-	{ MAX8998_LDO8,  &victory_ldo8_data },
-	{ MAX8998_LDO9,  &victory_ldo9_data },
+	{ MAX8998_LDO2, &victory_ldo2_data },
+	{ MAX8998_LDO3, &victory_ldo3_data },
+	{ MAX8998_LDO4, &victory_ldo4_data },
+	{ MAX8998_LDO5, &victory_ldo5_data },
+	{ MAX8998_LDO7, &victory_ldo7_data },
+	{ MAX8998_LDO8, &victory_ldo8_data },
+	{ MAX8998_LDO9, &victory_ldo9_data },
 	{ MAX8998_LDO11, &victory_ldo11_data },
 	{ MAX8998_LDO12, &victory_ldo12_data },
 	{ MAX8998_LDO13, &victory_ldo13_data },
@@ -795,96 +792,96 @@ static struct max8998_regulator_data victory_regulators[] = {
 	{ MAX8998_BUCK2, &victory_buck2_data },
 	{ MAX8998_BUCK3, &victory_buck3_data },
 	{ MAX8998_BUCK4, &victory_buck4_data },
-        { MAX8998_ESAFEOUT2, &victory_esafeout2_data },
+	{ MAX8998_ESAFEOUT2, &victory_esafeout2_data },
 };
 
-static struct max8998_adc_table_data temper_table[] =  {
-	{ 107,  -70 },
-	{ 109,  -60 },
-	{ 111,  -50 },
-	{ 113,  -40 },
-	{ 115,  -30 },
-	{ 117,  -20 },
-	{ 119,  -10 },
-	{ 121,  0 },
-	{ 123,  10 },
-	{ 125,  20 },
-	{ 127,  30 },
-	{ 129,  40 },
-	{ 131,  50 },
-	{ 133,  60 },
-	{ 135,  70 },
-	{ 137,  80 },
-	{ 139,  90 },
-	{ 141,  100 },
-	{ 143,  110 },
-	{ 145,  120 },
-	{ 147,  130 },
-	{ 149,  140 },
-	{ 151,  150 },
-	{ 153,  160 },
-	{ 155,  170 },
-	{ 157,  180 },
-	{ 159,  190 },
-	{ 161,  200 },
-	{ 163,  210 },
-	{ 165,  220 },
-	{ 167,  230 },
-	{ 169,  240 },
-	{ 171,  250 },
-	{ 173,  260 },
-	{ 175,  270 },
-	{ 177,  280 },
-	{ 179,  290 },
-	{ 181,  300 },
-	{ 183,  310 },
-	{ 185,  320 },
-	{ 187,  330 },
-	{ 189,  340 },
-	{ 191,  350 },
-	{ 193,  360 },
-	{ 195,  370 },
-	{ 197,  380 },
-	{ 199,  390 },
-	{ 201,  400 },
-	{ 203,  410 },
-	{ 205,  420 },
-	{ 207,  430 },
-	{ 209,  440 },
-	{ 211,  450 },
-	{ 213,  460 },
-	{ 215,  470 },
-	{ 217,  480 },
-	{ 219,  490 },
-	{ 221,  500 },
-	{ 223,  510 },
-	{ 225,  520 },
-	{ 227,  530 },
-	{ 229,  540 },
-	{ 231,  550 },
-	{ 233,  560 },
-	{ 235,  570 },
-	{ 237,  580 },
-	{ 239,  590 },
-	{ 241,  600 },
-	{ 243,  610 },
-	{ 245,  620 },
-	{ 247,  630 },
-	{ 249,  640 },
-	{ 251,  650 },
-	{ 253,  660 },
-	{ 255,  670 },
+static struct max8998_adc_table_data temper_table[] = {
+	{ 107, -70 },
+	{ 109, -60 },
+	{ 111, -50 },
+	{ 113, -40 },
+	{ 115, -30 },
+	{ 117, -20 },
+	{ 119, -10 },
+	{ 121, 0 },
+	{ 123, 10 },
+	{ 125, 20 },
+	{ 127, 30 },
+	{ 129, 40 },
+	{ 131, 50 },
+	{ 133, 60 },
+	{ 135, 70 },
+	{ 137, 80 },
+	{ 139, 90 },
+	{ 141, 100 },
+	{ 143, 110 },
+	{ 145, 120 },
+	{ 147, 130 },
+	{ 149, 140 },
+	{ 151, 150 },
+	{ 153, 160 },
+	{ 155, 170 },
+	{ 157, 180 },
+	{ 159, 190 },
+	{ 161, 200 },
+	{ 163, 210 },
+	{ 165, 220 },
+	{ 167, 230 },
+	{ 169, 240 },
+	{ 171, 250 },
+	{ 173, 260 },
+	{ 175, 270 },
+	{ 177, 280 },
+	{ 179, 290 },
+	{ 181, 300 },
+	{ 183, 310 },
+	{ 185, 320 },
+	{ 187, 330 },
+	{ 189, 340 },
+	{ 191, 350 },
+	{ 193, 360 },
+	{ 195, 370 },
+	{ 197, 380 },
+	{ 199, 390 },
+	{ 201, 400 },
+	{ 203, 410 },
+	{ 205, 420 },
+	{ 207, 430 },
+	{ 209, 440 },
+	{ 211, 450 },
+	{ 213, 460 },
+	{ 215, 470 },
+	{ 217, 480 },
+	{ 219, 490 },
+	{ 221, 500 },
+	{ 223, 510 },
+	{ 225, 520 },
+	{ 227, 530 },
+	{ 229, 540 },
+	{ 231, 550 },
+	{ 233, 560 },
+	{ 235, 570 },
+	{ 237, 580 },
+	{ 239, 590 },
+	{ 241, 600 },
+	{ 243, 610 },
+	{ 245, 620 },
+	{ 247, 630 },
+	{ 249, 640 },
+	{ 251, 650 },
+	{ 253, 660 },
+	{ 255, 670 },
 };
 struct s5p_batt_block_temp victory_batt_block_temp = {
-	.temp_high_block	= 215,
-	.temp_high_recover	= 195,
-	.temp_low_recover	= 118,
-	.temp_low_block	= 110,
-	.temp_high_block_lpm	= 208,
-	.temp_high_recover_lpm	= 197,
-	.temp_low_recover_lpm	= 122,
-	.temp_low_block_lpm	= 121,
-	.temp_high_event_block  = 247,
+	.temp_high_block = 215,
+	.temp_high_recover = 195,
+	.temp_low_recover = 118,
+	.temp_low_block = 110,
+	.temp_high_block_lpm = 208,
+	.temp_high_recover_lpm = 197,
+	.temp_low_recover_lpm = 122,
+	.temp_low_block_lpm = 121,
+	.temp_high_event_block = 247,
 };
 struct max8998_charger_callbacks *callbacks;
 static enum cable_type_t set_cable_status;
@@ -901,128 +898,128 @@ static void max8998_charger_register_callbacks(
 
 static struct max8998_charger_data victory_charger = {
 	.register_callbacks = &max8998_charger_register_callbacks,
-	.adc_table		= temper_table,
-	.adc_array_size		= ARRAY_SIZE(temper_table),
-	.termination_curr_adc	= 91,
+	.adc_table = temper_table,
+	.adc_array_size = ARRAY_SIZE(temper_table),
+	.termination_curr_adc = 91,
 };
 
 static struct max8998_platform_data max8998_pdata = {
 	.num_regulators = ARRAY_SIZE(victory_regulators),
-	.regulators     = victory_regulators,
-	.charger        = &victory_charger,
+	.regulators = victory_regulators,
+	.charger = &victory_charger,
 	/* Preloads must be in increasing order of voltage value */
-	.buck1_voltage4	= 950000,
-	.buck1_voltage3	= 1050000,
-	.buck1_voltage2	= 1200000,
-	.buck1_voltage1	= 1275000,
-	.buck2_voltage2	= 1000000,
-	.buck2_voltage1	= 1100000,
-	.buck1_set1	= GPIO_BUCK_1_EN_A,
-	.buck1_set2	= GPIO_BUCK_1_EN_B,
-	.buck2_set3	= GPIO_BUCK_2_EN,
+	.buck1_voltage4 = 950000,
+	.buck1_voltage3 = 1050000,
+	.buck1_voltage2 = 1200000,
+	.buck1_voltage1 = 1275000,
+	.buck2_voltage2 = 1000000,
+	.buck2_voltage1 = 1100000,
+	.buck1_set1 = GPIO_BUCK_1_EN_A,
+	.buck1_set2 = GPIO_BUCK_1_EN_B,
+	.buck2_set3 = GPIO_BUCK_2_EN,
 	.buck1_default_idx = 1,
 	.buck2_default_idx = 0,
-	.s5pc110_batt_block_temp  = &victory_batt_block_temp,
+	.s5pc110_batt_block_temp = &victory_batt_block_temp,
 };
 
 static struct regulator_init_data max8893_ldo1_data = {
-        .constraints    = {
-                .name           = "WIMAX_2.9V",
-                .min_uV         = 2900000,
-                .max_uV         = 2900000,
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "WIMAX_2.9V",
+		.min_uV = 2900000,
+		.max_uV = 2900000,
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct regulator_init_data max8893_ldo2_data = {
-        .constraints    = {
-                .name           = "TOUCH_KEY_3.0V",
-                .min_uV         = 3000000,   //20100628_inchul(from HW) 2.8V -> 3.0V
-                .max_uV         = 3000000,  //20100628_inchul(from HW) 2.8V -> 3.0V
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "TOUCH_KEY_3.0V",
+		.min_uV = 3000000, //20100628_inchul(from HW) 2.8V -> 3.0V
+		.max_uV = 3000000, //20100628_inchul(from HW) 2.8V -> 3.0V
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct regulator_init_data max8893_ldo3_data = {
-        .constraints    = {
-                .name           = "VCC_MOTOR_3.0V",
-                .min_uV         = 3000000,
-                .max_uV         = 3000000,
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "VCC_MOTOR_3.0V",
+		.min_uV = 3000000,
+		.max_uV = 3000000,
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct regulator_init_data max8893_ldo4_data = {
-        .constraints    = {
-                .name           = "WIMAX_SDIO_3.0V",
-                .min_uV         = 3000000,
-                .max_uV         = 3000000,
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "WIMAX_SDIO_3.0V",
+		.min_uV = 3000000,
+		.max_uV = 3000000,
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct regulator_init_data max8893_ldo5_data = {
-        .constraints    = {
-                .name           = "VDD_RF & IO_1.8V",
-                .min_uV         = 1800000,
-                .max_uV         = 1800000,
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "VDD_RF & IO_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct regulator_init_data max8893_buck_data = {
-        .constraints    = {
-                .name           = "VDDA & SDRAM & WIMAX_USB & RFC1C4_1.8V",
-                .min_uV         = 1800000,
-                .max_uV         = 1800000,
-                .always_on      = 0,
-                .apply_uV       = 1,
-                .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
-        },
+	.constraints = {
+		.name = "VDDA & SDRAM & WIMAX_USB & RFC1C4_1.8V",
+		.min_uV = 1800000,
+		.max_uV = 1800000,
+		.always_on = 0,
+		.apply_uV = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
 };
 
 static struct max8893_subdev_data universal_8893_regulators[] = {
-        { MAX8893_LDO1, &max8893_ldo1_data },
-        { MAX8893_LDO2, &max8893_ldo2_data },
-  { MAX8893_LDO3, &max8893_ldo3_data },
-        { MAX8893_LDO4, &max8893_ldo4_data },
-  { MAX8893_LDO5, &max8893_ldo5_data },
-  { MAX8893_BUCK, &max8893_buck_data },
+	{ MAX8893_LDO1, &max8893_ldo1_data },
+	{ MAX8893_LDO2, &max8893_ldo2_data },
+	{ MAX8893_LDO3, &max8893_ldo3_data },
+	{ MAX8893_LDO4, &max8893_ldo4_data },
+	{ MAX8893_LDO5, &max8893_ldo5_data },
+	{ MAX8893_BUCK, &max8893_buck_data },
 };
 
 static struct max8893_platform_data max8893_platform_data = {
-        .num_subdevs = ARRAY_SIZE(universal_8893_regulators),
-        .subdevs     = universal_8893_regulators,
+	.num_subdevs = ARRAY_SIZE(universal_8893_regulators),
+	.subdevs = universal_8893_regulators,
 };
 
 static struct i2c_board_info i2c_devs12[] __initdata = {
-        {
-                I2C_BOARD_INFO("max8893", (0x3E)),
-                .platform_data = &max8893_platform_data,
-        },
+	{
+		I2C_BOARD_INFO("max8893", (0x3E)),
+		.platform_data = &max8893_platform_data,
+	},
 };
 
 struct platform_device s3c_device_8893consumer = {
-        .name             = "max8893-consumer",
-        .id               = 0,
-        .dev = { .platform_data = &max8893_platform_data },
+	.name = "max8893-consumer",
+	.id = 0,
+	.dev = {
+		.platform_data = &max8893_platform_data
+	},
 };
 
-
-
 struct platform_device sec_device_dpram = {
-	.name	= "dpram-device",
-	.id	= -1,
+	.name = "dpram-device",
+	.id = -1,
 };
 
 static void panel_cfg_gpio(struct platform_device *pdev)
@@ -1054,6 +1051,13 @@ static void panel_cfg_gpio(struct platform_device *pdev)
 	writel(0x1, S5P_MDNIE_SEL);
 #else
 	writel(0x2, S5P_MDNIE_SEL);
+#endif
+#if 0
+	/* drive strength to max */
+	writel(0xffffffff, S5P_VA_GPIO + 0x12c); /* GPF0DRV */
+	writel(0xffffffff, S5P_VA_GPIO + 0x14c); /* GPF1DRV */
+	writel(0xffffffff, S5P_VA_GPIO + 0x16c); /* GPF2DRV */
+	writel(0x000000ff, S5P_VA_GPIO + 0x18c); /* GPF3DRV */
 #endif
 
 	/* DISPLAY_CS */
@@ -1102,11 +1106,12 @@ void lcd_cfg_gpio_early_suspend(void)
 		s3c_gpio_setpull(S5PV210_GPF3(i), S3C_GPIO_PULL_NONE);
 		gpio_set_value(S5PV210_GPF3(i), 0);
 	}
-	/* drive strength to max */
-/*	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x12c);
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x14c);
-	writel(0xffffffff, S3C_ADDR(0x00500000) + 0x16c);
-	writel(0x000000ff, S3C_ADDR(0x00500000) + 0x18c); */
+
+	/* drive strength to min */
+	writel(0x00000000, S5P_VA_GPIO + 0x12c); /* GPF0DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x14c); /* GPF1DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x16c); /* GPF2DRV */
+	writel(0x00000000, S5P_VA_GPIO + 0x18c); /* GPF3DRV */
 
 	/* LCD_RST */
 	s3c_gpio_cfgpin(GPIO_MLCD_RST, S3C_GPIO_OUTPUT);
@@ -1148,10 +1153,8 @@ static int panel_reset_lcd(struct platform_device *pdev)
 
 	gpio_direction_output(S5PV210_MP05(5), 1);
 	msleep(10);
-
 	gpio_set_value(S5PV210_MP05(5), 0);
 	msleep(10);
-
 	gpio_set_value(S5PV210_MP05(5), 1);
 	msleep(10);
 
@@ -1172,7 +1175,6 @@ static struct s3cfb_lcd s6e63m0 = {
 	.p_height = 86,
 	.bpp = 24,
 	.freq = 60,
-
 	.timing = {
 		.h_fp = 16,
 		.h_bp = 16,
@@ -1192,15 +1194,15 @@ static struct s3cfb_lcd s6e63m0 = {
 };
 
 static struct s3c_platform_fb tl2796_data __initdata = {
-	.hw_ver         = 0x62,
-	.clk_name       = "sclk_fimd",
-	.nr_wins        = 5,
-	.default_win    = CONFIG_FB_S3C_DEFAULT_WINDOW,
-	.swap           = FB_SWAP_HWORD | FB_SWAP_WORD,
-	.lcd            = &s6e63m0,
-	.cfg_gpio       = panel_cfg_gpio,
-	.backlight_on   = panel_backlight_on,
-	.reset_lcd      = panel_reset_lcd,
+	.hw_ver = 0x62,
+	.clk_name = "sclk_fimd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S3C_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+	.lcd = &s6e63m0,
+	.cfg_gpio = panel_cfg_gpio,
+	.backlight_on = panel_backlight_on,
+	.reset_lcd = panel_reset_lcd,
 };
 
 #define LCD_BUS_NUM     3
@@ -1212,152 +1214,148 @@ static struct s3c_platform_fb tl2796_data __initdata = {
 
 static struct spi_board_info spi_board_info[] __initdata = {
 	{
-		.modalias       = "tl2796",
-		.platform_data  = &aries_panel_data,
-		.max_speed_hz   = 1200000,
-		.bus_num        = LCD_BUS_NUM,
-		.chip_select    = 0,
-		.mode           = SPI_MODE_3,
+		.modalias = "tl2796",
+		.platform_data = &aries_panel_data,
+		.max_speed_hz = 1200000,
+		.bus_num = LCD_BUS_NUM,
+		.chip_select = 0,
+		.mode = SPI_MODE_3,
 		.controller_data = (void *)DISPLAY_CS,
 	},
 };
 
 static struct spi_gpio_platform_data tl2796_spi_gpio_data = {
-	.sck	= DISPLAY_CLK,
-	.mosi	= DISPLAY_SI,
-	.miso	= DISPLAY_SO,
+	.sck = DISPLAY_CLK,
+	.mosi = DISPLAY_SI,
+	.miso = DISPLAY_SO,
 	.num_chipselect = 2,
 };
 
 static struct platform_device s3c_device_spi_gpio = {
-	.name	= "spi_gpio",
-	.id	= LCD_BUS_NUM,
-	.dev	= {
-		.parent		= &s3c_device_fb.dev,
-		.platform_data	= &tl2796_spi_gpio_data,
+	.name = "spi_gpio",
+	.id = LCD_BUS_NUM,
+	.dev = {
+		.parent = &s3c_device_fb.dev,
+		.platform_data = &tl2796_spi_gpio_data,
 	},
 };
 
 struct vibrator_platform_data vibrator_data = {
-
-       .timer_id = 2,
-       .vib_enable_gpio = GPIO_VIBTONE_EN1,
+	.timer_id = 2,
+	.vib_enable_gpio = GPIO_VIBTONE_EN1,
 };
 
 static struct platform_device s3c_device_vibrator = {
-       .name = "cm4040_cs",
-       .id   = -1,
-        .dev  = {
-                 .platform_data = &vibrator_data,
-               },
+	.name = "cm4040_cs",
+	.id = -1,
+	.dev = {
+		.platform_data = &vibrator_data,
+	},
 };
 
 static struct i2c_gpio_platform_data victory_i2c4_platdata = {
-	.sda_pin		= GPIO_AP_SDA_18V,
-	.scl_pin		= GPIO_AP_SCL_18V,
-	.udelay			= 2,    /* 250KHz */
-	.sda_is_open_drain	= 0,
-	.scl_is_open_drain	= 0,
-	.scl_is_output_only	= 0,
+	.sda_pin = GPIO_AP_SDA_18V,
+	.scl_pin = GPIO_AP_SCL_18V,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c4 = {
-	.name			= "i2c-gpio",
-	.id			= 4,
-	.dev.platform_data	= &victory_i2c4_platdata,
+	.name = "i2c-gpio",
+	.id = 4,
+	.dev.platform_data = &victory_i2c4_platdata,
 };
 
-static  struct  i2c_gpio_platform_data victory_i2c5_platdata = {
-        .sda_pin                = AP_SDA_30V,
-        .scl_pin                = AP_SCL_30V,
-        .udelay                 = 2,    /* 250KHz */
-        .sda_is_open_drain      = 0,
-        .scl_is_open_drain      = 0,
-        .scl_is_output_only     = 0,
+static struct i2c_gpio_platform_data victory_i2c5_platdata = {
+	.sda_pin = AP_SDA_30V,
+	.scl_pin = AP_SCL_30V,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c5 = {
-        .name                           = "i2c-gpio",
-        .id                                     = 5,
-        .dev.platform_data      = &victory_i2c5_platdata,
+	.name = "i2c-gpio",
+	.id = 5,
+	.dev.platform_data = &victory_i2c5_platdata,
 };
- 
-
 
 static struct i2c_gpio_platform_data victory_i2c6_platdata = {
-	.sda_pin                = GPIO_AP_PMIC_SDA,
-	.scl_pin                = GPIO_AP_PMIC_SCL,
-	.udelay                 = 2,    /* 250KHz */
-	.sda_is_open_drain      = 0,
-	.scl_is_open_drain      = 0,
-	.scl_is_output_only     = 0,
+	.sda_pin = GPIO_AP_PMIC_SDA,
+	.scl_pin = GPIO_AP_PMIC_SCL,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c6 = {
-	.name			= "i2c-gpio",
-	.id			= 6,
-	.dev.platform_data      = &victory_i2c6_platdata,
+	.name = "i2c-gpio",
+	.id = 6,
+	.dev.platform_data = &victory_i2c6_platdata,
 };
 
-static  struct  i2c_gpio_platform_data victory_i2c9_platdata = {
-	.sda_pin                = FUEL_SDA_18V,
-	.scl_pin                = FUEL_SCL_18V,
-	.udelay                 = 2,    /* 250KHz */
-	.sda_is_open_drain      = 0,
-	.scl_is_open_drain      = 0,
-	.scl_is_output_only     = 0,
+static struct i2c_gpio_platform_data victory_i2c9_platdata = {
+	.sda_pin = FUEL_SDA_18V,
+	.scl_pin = FUEL_SCL_18V,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c9 = {
-	.name			= "i2c-gpio",
-	.id			= 9,
-	.dev.platform_data	= &victory_i2c9_platdata,
+	.name = "i2c-gpio",
+	.id = 9,
+	.dev.platform_data = &victory_i2c9_platdata,
 };
 
-static  struct  i2c_gpio_platform_data victory_i2c10_platdata = {
-	.sda_pin                = _3_TOUCH_SDA_28V,
-	.scl_pin                = _3_TOUCH_SCL_28V,
-	.udelay                 = 0,    /* 250KHz */
-	.sda_is_open_drain      = 0,
-	.scl_is_open_drain      = 0,
-	.scl_is_output_only     = 0,
+static struct i2c_gpio_platform_data victory_i2c10_platdata = {
+	.sda_pin = _3_TOUCH_SDA_28V,
+	.scl_pin = _3_TOUCH_SCL_28V,
+	.udelay = 0, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c10 = {
-	.name                   = "i2c-gpio",
-	.id                     = 10,
-	.dev.platform_data      = &victory_i2c10_platdata,
+	.name = "i2c-gpio",
+	.id = 10,
+	.dev.platform_data = &victory_i2c10_platdata,
 };
 
-static  struct  i2c_gpio_platform_data victory_i2c11_platdata = {
-	.sda_pin                = GPIO_FM_SDA_28V,
-	.scl_pin                = GPIO_FM_SCL_28V,
-	.udelay                 = 2,    /* 250KHz */
-	.sda_is_open_drain      = 0,
-	.scl_is_open_drain      = 0,
-	.scl_is_output_only     = 0,
+static struct i2c_gpio_platform_data victory_i2c11_platdata = {
+	.sda_pin = GPIO_FM_SDA_28V,
+	.scl_pin = GPIO_FM_SCL_28V,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c11 = {
-	.name			= "i2c-gpio",
-	.id			= 11,
-	.dev.platform_data	= &victory_i2c11_platdata,
+	.name = "i2c-gpio",
+	.id = 11,
+	.dev.platform_data = &victory_i2c11_platdata,
 };
 
-
-static  struct  i2c_gpio_platform_data victory_i2c12_platdata = {
-        .sda_pin                = GPIO_WIMAX_PM_SDA,
-        .scl_pin                = GPIO_WIMAX_PM_SCL,
-        .udelay                 = 2,    /* 250KHz */
-        .sda_is_open_drain      = 0,
-        .scl_is_open_drain      = 0,
-        .scl_is_output_only     = 0,
+static struct i2c_gpio_platform_data victory_i2c12_platdata = {
+	.sda_pin = GPIO_WIMAX_PM_SDA,
+	.scl_pin = GPIO_WIMAX_PM_SCL,
+	.udelay = 2, /* 250KHz */
+	.sda_is_open_drain = 0,
+	.scl_is_open_drain = 0,
+	.scl_is_output_only = 0,
 };
 
 static struct platform_device victory_device_i2c12 = {
-        .name                   = "i2c-gpio",
-        .id                     = 12,
-        .dev.platform_data      = &victory_i2c12_platdata,
+	.name = "i2c-gpio",
+	.id = 12,
+	.dev.platform_data = &victory_i2c12_platdata,
 };
 
 static const int touch_keypad_code[] = {
@@ -1373,18 +1371,18 @@ static struct touchkey_platform_data touchkey_data = {
 };
 
 struct qt602240_platform_data qt602240_data = {
-        .x_size 		= 799,
-        .y_size 		= 479,
-       	.irq 			= IRQ_TOUCH_INT,
-	.touch_int 		= GPIO_TOUCH_INT,
-	.touch_en  		= GPIO_TOUCH_EN,
-	.orient			= 7,		
+	.x_size = 799,
+	.y_size = 479,
+	.irq = IRQ_TOUCH_INT,
+	.touch_int = GPIO_TOUCH_INT,
+	.touch_en = GPIO_TOUCH_EN,
+	.orient = 7,
 };
 
 static struct gpio_event_direct_entry victory_keypad_key_map[] = {
 	{
-		.gpio	= S5PV210_GPH2(6),
-		.code	= KEY_POWER,
+		.gpio = S5PV210_GPH2(6),
+		.code = KEY_POWER,
 	},
 };
 
@@ -1400,7 +1398,6 @@ static struct gpio_event_input_info victory_keypad_key_info = {
 static struct gpio_event_info *victory_input_info[] = {
 	&victory_keypad_key_info.info,
 };
-
 
 static struct gpio_event_platform_data victory_input_data = {
 	.names = {
@@ -1422,8 +1419,8 @@ static struct platform_device victory_input_device = {
 #ifdef CONFIG_S5P_ADC
 static struct s3c_adc_mach_info s3c_adc_platform __initdata = {
 	/* s5pc110 support 12-bit resolution */
-	.delay  = 10000,
-	.presc  = 65,
+	.delay = 10000,
+	.presc = 65,
 	.resolution = 12,
 };
 #endif
@@ -1431,8 +1428,8 @@ static struct s3c_adc_mach_info s3c_adc_platform __initdata = {
 /* in revisions before 0.9, there is a common mic bias gpio */
 
 static DEFINE_SPINLOCK(mic_bias_lock);
-static bool wm8994_mic_bias;
-static bool jack_mic_bias;
+static bool wm8994_mic_bias = false;
+static bool jack_mic_bias = false;
 static void set_shared_mic_bias(void)
 {
 	gpio_set_value(GPIO_MICBIAS_EN, wm8994_mic_bias || jack_mic_bias);
@@ -1599,7 +1596,7 @@ static int ce147_ldo_en(bool en)
 		goto off;
 	}
 	udelay(50);
-	
+
 	/*ldo 12*/
 	err = regulator_enable(cam_sensor_core_regulator);
 	if (err) {
@@ -1702,154 +1699,120 @@ static int ce147_power_on(void)
 
 	ce147_init();
 
-	/* CAM_VGA_nSTBY - GPB(0)  */
+	/* CAM_VGA_nSTBY - GPB(0) */
 	err = gpio_request(GPIO_CAM_VGA_nSTBY, "GPB0");
-
 	if (err) {
 		printk(KERN_ERR "failed to request GPB0 for camera control\n");
-
 		return err;
 	}
 
 	/* CAM_VGA_nRST - GPB(2) */
 	err = gpio_request(GPIO_CAM_VGA_nRST, "GPB2");
-
 	if (err) {
 		printk(KERN_ERR "failed to request GPB2 for camera control\n");
-
 		return err;
 	}
-	
-	ce147_ldo_en(TRUE);
 
+	ce147_ldo_en(TRUE);
 	mdelay(1);
 
-	// CAM_VGA_nSTBY  HIGH		
+	// CAM_VGA_nSTBY HIGH
 	gpio_direction_output(GPIO_CAM_VGA_nSTBY, 0);
-
 	gpio_set_value(GPIO_CAM_VGA_nSTBY, 1);
-
 	mdelay(1);
 
 	// Mclk enable
 	s3c_gpio_cfgpin(GPIO_CAM_MCLK, S3C_GPIO_SFN(0x02));
-
 	mdelay(1);
 
-	// CAM_VGA_nRST  HIGH		
+	// CAM_VGA_nRST HIGH
 	gpio_direction_output(GPIO_CAM_VGA_nRST, 0);
-
-	gpio_set_value(GPIO_CAM_VGA_nRST, 1);	
-
+	gpio_set_value(GPIO_CAM_VGA_nRST, 1);
 	mdelay(1);
 
-	// CAM_VGA_nSTBY  LOW	
+	// CAM_VGA_nSTBY LOW
 	gpio_direction_output(GPIO_CAM_VGA_nSTBY, 1);
-
 	gpio_set_value(GPIO_CAM_VGA_nSTBY, 0);
-
 	mdelay(1);
 
 	// CAM_MEGA_EN HIGH
 	gpio_direction_output(GPIO_CAM_MEGA_EN, 0);
-
 	gpio_set_value(GPIO_CAM_MEGA_EN, 1);
-
 	mdelay(1);
 
 	// CAM_MEGA_nRST HIGH
 	gpio_direction_output(GPIO_CAM_MEGA_nRST, 0);
-
 	gpio_set_value(GPIO_CAM_MEGA_nRST, 1);
 
 	gpio_free(GPIO_CAM_MEGA_EN);
 	gpio_free(GPIO_CAM_MEGA_nRST);
 	gpio_free(GPIO_CAM_VGA_nSTBY);
-	gpio_free(GPIO_CAM_VGA_nRST);	
-
+	gpio_free(GPIO_CAM_VGA_nRST);
 	mdelay(5);
 
 	return 0;
 }
 
-
 static int ce147_power_off(void)
 {
 	int err;
 	bool FALSE = false;
-	
+
 	/* CAM_MEGA_EN - GPJ0(6) */
 	err = gpio_request(GPIO_CAM_MEGA_EN, "GPJ0");
-
 	if(err) {
 		printk(KERN_ERR "failed to request GPJ0 for camera control\n");
-	
 		return err;
 	}
 
 	/* CAM_MEGA_nRST - GPJ1(5) */
 	err = gpio_request(GPIO_CAM_MEGA_nRST, "GPJ1");
-	
 	if(err) {
 		printk(KERN_ERR "failed to request GPJ1 for camera control\n");
-	
 		return err;
 	}
 
 	/* CAM_VGA_nRST - GPB(2) */
 	err = gpio_request(GPIO_CAM_VGA_nRST, "GPB2");
-
 	if (err) {
 		printk(KERN_ERR "failed to request GPB2 for camera control\n");
-
 		return err;
 	}
-	/* CAM_VGA_nSTBY - GPB(0)  */
-	err = gpio_request(GPIO_CAM_VGA_nSTBY, "GPB0");
 
+	/* CAM_VGA_nSTBY - GPB(0) */
+	err = gpio_request(GPIO_CAM_VGA_nSTBY, "GPB0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPB0 for camera control\n");
-
 		return err;
 	}
 
-	// CAM_VGA_nSTBY  LOW	
+	// CAM_VGA_nSTBY LOW
 	gpio_direction_output(GPIO_CAM_VGA_nSTBY, 1);
-
 	gpio_set_value(GPIO_CAM_VGA_nSTBY, 0);
-
 	mdelay(1);
 
-	// CAM_VGA_nRST  LOW		
+	// CAM_VGA_nRST LOW
 	gpio_direction_output(GPIO_CAM_VGA_nRST, 1);
-	
 	gpio_set_value(GPIO_CAM_VGA_nRST, 0);
-
 	mdelay(1);
 
 	// CAM_MEGA_nRST - GPJ1(5) LOW
 	gpio_direction_output(GPIO_CAM_MEGA_nRST, 1);
-
 	gpio_set_value(GPIO_CAM_MEGA_nRST, 0);
-
 	mdelay(1);
 
 	// Mclk disable
 	s3c_gpio_cfgpin(GPIO_CAM_MCLK, 0);
-
 	mdelay(1);
 
 	// CAM_MEGA_EN - GPJ0(6) LOW
 	gpio_direction_output(GPIO_CAM_MEGA_EN, 1);
-	
 	gpio_set_value(GPIO_CAM_MEGA_EN, 0);
-
 	mdelay(1);
 
 	ce147_ldo_en(FALSE);
-
 	mdelay(1);
-	
+
 	gpio_free(GPIO_CAM_MEGA_EN);
 	gpio_free(GPIO_CAM_MEGA_nRST);
 	gpio_free(GPIO_CAM_VGA_nRST);
@@ -1857,7 +1820,6 @@ static int ce147_power_off(void)
 
 	return 0;
 }
-
 
 static int ce147_power_en(int onoff)
 {
@@ -1875,7 +1837,6 @@ static int ce147_power_en(int onoff)
 		s3c_gpio_cfgpin(S5PV210_GPE1(3), 0);
 		ce147_ldo_en(false);
 	}
-    
 	return 0;
 #endif
 
@@ -1891,7 +1852,7 @@ static int ce147_power_en(int onoff)
 	}
 
 	return 0;
-	}
+}
 
 static int smdkc110_cam1_power(int onoff)
 {
@@ -1904,22 +1865,16 @@ static int smdkc110_cam1_power(int onoff)
 	if (err) {
 		printk(KERN_ERR "failed to request GPB for camera control\n");
 	return err;
-}
+	}
 
 	gpio_direction_output(S5PV210_GPB(0), 0);
-
 	mdelay(1);
-
 	gpio_direction_output(S5PV210_GPB(0), 1);
-
 	mdelay(1);
-
 	gpio_set_value(S5PV210_GPB(0), 1);
-
 	mdelay(1);
 
 	gpio_free(S5PV210_GPB(0));
-	
 	mdelay(1);
 
 	/* CAM_VGA_nRST - GPB(2) */
@@ -1928,18 +1883,13 @@ static int smdkc110_cam1_power(int onoff)
 	if (err) {
 		printk(KERN_ERR "failed to request GPB for camera control\n");
 		return err;
-}
+	}
 
 	gpio_direction_output(S5PV210_GPB(2), 0);
-
 	mdelay(1);
-
 	gpio_direction_output(S5PV210_GPB(2), 1);
-
 	mdelay(1);
-
 	gpio_set_value(S5PV210_GPB(2), 1);
-
 	mdelay(1);
 
 	gpio_free(S5PV210_GPB(2));
@@ -1962,40 +1912,38 @@ static struct ce147_platform_data ce147_plat = {
 	.power_en = ce147_power_en,
 };
 
-static struct i2c_board_info  ce147_i2c_info = {
+static struct i2c_board_info ce147_i2c_info = {
 	I2C_BOARD_INFO("CE147", 0x78>>1),
 	.platform_data = &ce147_plat,
 };
 
 static struct s3c_platform_camera ce147 = {
-	.id		= CAMERA_PAR_A,
-	.type		= CAM_TYPE_ITU,
-	.fmt		= ITU_601_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_CBYCRY,
-	.i2c_busnum	= 0,
-	.info		= &ce147_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.srclk_name	= "xusbxti",
-	.clk_name	= "sclk_cam",//"sclk_cam0",
-	.clk_rate	= 24000000,
-	.line_length	= 1920,
-	.width		= 640,
-	.height		= 480,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 640,
-		.height	= 480,
+	.id = CAMERA_PAR_A,
+	.type = CAM_TYPE_ITU,
+	.fmt = ITU_601_YCBCR422_8BIT,
+	.order422 = CAM_ORDER422_8BIT_CBYCRY,
+	.i2c_busnum = 0,
+	.info = &ce147_i2c_info,
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.srclk_name = "xusbxti",
+	.clk_name = "sclk_cam",//"sclk_cam0",
+	.clk_rate = 24000000,
+	.line_length = 1920,
+	.width = 640,
+	.height = 480,
+	.window = {
+		.left = 0,
+		.top = 0,
+		.width = 640,
+		.height = 480,
 	},
-
-	// Polarity 
-	.inv_pclk	= 0,
-	.inv_vsync 	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-
-	.initialized 	= 0,
-	.cam_power	= ce147_power_en,
+	// Polarity
+	.inv_pclk = 0,
+	.inv_vsync = 1,
+	.inv_href = 0,
+	.inv_hsync = 0,
+	.initialized = 0,
+	.cam_power = ce147_power_en,
 };
 #endif
 
@@ -2242,7 +2190,6 @@ static struct s5ka3dfx_platform_data s5ka3dfx_plat = {
 	.pixelformat = V4L2_PIX_FMT_UYVY,
 	.freq = 24000000,
 	.is_mipi = 0,
-
 	.cam_power = s5ka3dfx_power_en,
 };
 
@@ -2252,59 +2199,57 @@ static struct i2c_board_info s5ka3dfx_i2c_info = {
 };
 
 static struct s3c_platform_camera s5ka3dfx = {
-	.id		= CAMERA_PAR_A,
-	.type		= CAM_TYPE_ITU,
-	.fmt		= ITU_601_YCBCR422_8BIT,
-	.order422	= CAM_ORDER422_8BIT_CBYCRY,
-	.i2c_busnum	= 0,
-	.info		= &s5ka3dfx_i2c_info,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.srclk_name	= "xusbxti",
-	.clk_name	= "sclk_cam",
-	.clk_rate	= 24000000,
-	.line_length	= 480,
-	.width		= 640,
-	.height		= 480,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 640,
-		.height	= 480,
+	.id = CAMERA_PAR_A,
+	.type = CAM_TYPE_ITU,
+	.fmt = ITU_601_YCBCR422_8BIT,
+	.order422 = CAM_ORDER422_8BIT_CBYCRY,
+	.i2c_busnum = 0,
+	.info = &s5ka3dfx_i2c_info,
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.srclk_name = "xusbxti",
+	.clk_name = "sclk_cam",
+	.clk_rate = 24000000,
+	.line_length = 480,
+	.width = 640,
+	.height = 480,
+	.window = {
+		.left = 0,
+		.top = 0,
+		.width = 640,
+		.height = 480,
 	},
-
 	/* Polarity */
-	.inv_pclk	= 0,
-	.inv_vsync	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-
-	.initialized	= 0,
-	.cam_power	= s5ka3dfx_power_en,
+	.inv_pclk = 0,
+	.inv_vsync = 1,
+	.inv_href = 0,
+	.inv_hsync = 0,
+	.initialized = 0,
+	.cam_power = s5ka3dfx_power_en,
 };
 #endif
 
 /* Interface setting */
 static struct s3c_platform_fimc fimc_plat_lsi = {
-	.srclk_name	= "mout_mpll",
-	.clk_name	= "sclk_fimc",
-	.lclk_name	= "fimc",
-	.clk_rate	= 166750000,
-	.default_cam	= CAMERA_PAR_A,
-	.camera		= {
+	.srclk_name = "mout_mpll",
+	.clk_name = "sclk_fimc",
+	.lclk_name = "fimc",
+	.clk_rate = 166750000,
+	.default_cam = CAMERA_PAR_A,
+	.camera = {
 		&ce147,
 #ifdef CONFIG_VIDEO_S5KA3DFX
 		&s5ka3dfx,
 #endif /* CONFIG_VIDEO_S5KA3DFX */
 	},
-	.hw_ver		= 0x43,
+	.hw_ver = 0x43,
 };
 
 #ifdef CONFIG_VIDEO_JPEG_V2
 static struct s3c_platform_jpeg jpeg_plat __initdata = {
-	.max_main_width	= 800,
-	.max_main_height	= 480,
-	.max_thumb_width	= 320,
-	.max_thumb_height	= 240,
+	.max_main_width = 800,
+	.max_main_height = 480,
+	.max_thumb_width = 320,
+	.max_thumb_height = 240,
 };
 #endif
 
@@ -2318,7 +2263,7 @@ static void fsa9480_usb_cb(bool attached)
 	if (gadget) {
 		if (attached)
 			usb_gadget_vbus_connect(gadget);
-		else 
+		else
 			usb_gadget_vbus_disconnect(gadget);
 	}
 
@@ -2359,7 +2304,7 @@ static void fsa9480_charger_cb(bool attached)
 		kernel_sec_set_cable_attach();
 	else
 		kernel_sec_clear_cable_attach();
-	if (callbacks && callbacks->set_cable) 
+	if (callbacks && callbacks->set_cable)
 		callbacks->set_cable(callbacks, set_cable_status);
 }
 
@@ -2386,7 +2331,7 @@ static void fsa9480_cardock_cb(bool attached)
 static void fsa9480_reset_cb(void)
 {
 	int ret;
-	
+
 	/* for CarDock, DeskDock */
 	ret = switch_dev_register(&switch_dock);
 	if (ret < 0)
@@ -2405,10 +2350,9 @@ static struct fsa9480_platform_data fsa9480_pdata = {
 	.cardock_cb = fsa9480_cardock_cb,
 	.reset_cb = fsa9480_reset_cb,
 	.set_init_flag = fsa9480_set_init_flag,
-        .spk_switch = SWITCH_PORT_VAUDIO,
+	.spk_switch = SWITCH_PORT_VAUDIO,
 	.wimax_cb = fsa9480_wimax_cb,
 };
-
 
 /* I2C0 */
 static struct i2c_board_info i2c_devs0[] __initdata = {
@@ -2439,18 +2383,17 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 static struct i2c_board_info i2c_devs10[] __initdata = {
 	{
 		I2C_BOARD_INFO(CYPRESS_TOUCHKEY_DEV_NAME, 0x20),
-		.platform_data  = &touchkey_data,
-		.irq =  IRQ_EINT_GROUP(21,3),
+		.platform_data = &touchkey_data,
+		.irq = IRQ_EINT_GROUP(21,3),
 	},
 };
 
 static struct i2c_board_info i2c_devs2[] __initdata = {
 	{
 		I2C_BOARD_INFO("qt602240_ts", 0x4a),
-		.platform_data  = &qt602240_data,
+		.platform_data = &qt602240_data,
 	},
 };
-
 
 static struct i2c_board_info i2c_devs8[] __initdata = {
 };
@@ -2459,8 +2402,8 @@ static struct i2c_board_info i2c_devs6[] __initdata = {
 	{
 		/* The address is 0xCC used since SRAD = 0 */
 		I2C_BOARD_INFO("max8998", (0xCC >> 1)),
-		.platform_data	= &max8998_pdata,
-		.irq		= IRQ_EINT7,
+		.platform_data = &max8998_pdata,
+		.irq = IRQ_EINT7,
 	}, {
 		I2C_BOARD_INFO("rtc_max8998", (0x0D >> 1)),
 	},
@@ -2504,7 +2447,6 @@ static int gp2a_light_adc_value(void)
 	return s3c_adc_get_adc_data(6);
 }
 
-
 static struct gp2a_platform_data gp2a_pdata = {
 	.power = gp2a_power,
 	.p_out = GPIO_PS_VOUT,
@@ -2528,24 +2470,37 @@ static void gp2a_gpio_init(void)
 	s3c_gpio_slp_cfgpin(GPIO_PS_ON, S3C_GPIO_SLP_PREV);
 	mdelay(1);
 
-        if (system_rev < 0x0A) {
-                s3c_gpio_cfgpin(S5PV210_GPJ0(1), S3C_GPIO_SFN(GPIO_PS_VOUT_AF));
-                s3c_gpio_setpull(S5PV210_GPJ0(1), S3C_GPIO_PULL_NONE);
-                irq_set_irq_type(IRQ_EINT_GROUP18_BASE + 1, IRQ_TYPE_EDGE_BOTH);
-                gp2a_pdata.p_irq = (IRQ_EINT_GROUP18_BASE + 1);
-                gp2a_pdata.p_out = S5PV210_GPJ0(1);
-
-        } else {
-                s3c_gpio_cfgpin(GPIO_PS_VOUT, S3C_GPIO_SFN(GPIO_PS_VOUT_AF));
-                s3c_gpio_setpull(GPIO_PS_VOUT, S3C_GPIO_PULL_NONE);
-                irq_set_irq_type(IRQ_EINT1, IRQ_TYPE_EDGE_BOTH);
-                gp2a_pdata.p_irq = gpio_to_irq(GPIO_PS_VOUT);
-                gp2a_pdata.p_out = GPIO_PS_VOUT;
-        }
+	if (system_rev < 0x0A) {
+		s3c_gpio_cfgpin(S5PV210_GPJ0(1), S3C_GPIO_SFN(GPIO_PS_VOUT_AF));
+		s3c_gpio_setpull(S5PV210_GPJ0(1), S3C_GPIO_PULL_NONE);
+		irq_set_irq_type(IRQ_EINT_GROUP18_BASE + 1, IRQ_TYPE_EDGE_BOTH);
+		gp2a_pdata.p_irq = (IRQ_EINT_GROUP18_BASE + 1);
+		gp2a_pdata.p_out = S5PV210_GPJ0(1);
+	} else {
+		s3c_gpio_cfgpin(GPIO_PS_VOUT, S3C_GPIO_SFN(GPIO_PS_VOUT_AF));
+		s3c_gpio_setpull(GPIO_PS_VOUT, S3C_GPIO_PULL_NONE);
+		irq_set_irq_type(IRQ_EINT1, IRQ_TYPE_EDGE_BOTH);
+		gp2a_pdata.p_irq = gpio_to_irq(GPIO_PS_VOUT);
+		gp2a_pdata.p_out = GPIO_PS_VOUT;
+	}
 	if (ret)
 		printk(KERN_ERR "Failed to request gpio gp2a power supply.\n");
 }
 
+static void pwm_gpio_init(void)
+{
+	int i = 0;
+	int ret = 0;
+	for (i = 0; i < ARRAY_SIZE(victory_pwm_data); i++) {
+		if (gpio_is_valid(victory_pwm_data[i].gpio_no)) {
+			ret = gpio_request(victory_pwm_data[i].gpio_no, victory_pwm_data[i].gpio_name);
+			if (ret)
+				printk(KERN_ERR "failed to get GPIO for PWM0\n");
+			s3c_gpio_cfgpin(victory_pwm_data[i].gpio_no, victory_pwm_data[i].gpio_set_value);
+			gpio_free(victory_pwm_data[i].gpio_no);
+		}
+	}
+}
 
 static struct i2c_board_info i2c_devs11[] __initdata = {
 	{
@@ -2553,7 +2508,6 @@ static struct i2c_board_info i2c_devs11[] __initdata = {
 		.platform_data = &gp2a_pdata,
 	},
 };
-
 
 static struct resource ram_console_resource[] = {
 	{
@@ -2631,8 +2585,8 @@ static void __init android_pmem_set_platdata(void)
 #endif
 
 struct platform_device sec_device_battery = {
-	.name	= "sec-battery",
-	.id	= -1,
+	.name = "sec-battery",
+	.id = -1,
 };
 
 static int sec_switch_get_cable_status(void)
@@ -2675,51 +2629,49 @@ static struct sec_switch_platform_data sec_switch_pdata = {
 };
 
 struct platform_device sec_device_switch = {
-	.name   = "sec_switch",
-	.id     = 1,
-	.dev    = {
-		.platform_data  = &sec_switch_pdata,
+	.name = "sec_switch",
+	.id = 1,
+	.dev = {
+		.platform_data = &sec_switch_pdata,
 	}
 };
 
 static struct platform_device sec_device_rfkill = {
-	.name	= "bt_rfkill",
-	.id	= -1,
+	.name = "bt_rfkill",
+	.id = -1,
 };
 
 static struct platform_device sec_device_btsleep = {
-	.name	= "bt_sleep",
-	.id	= -1,
+	.name = "bt_sleep",
+	.id = -1,
 };
 
 struct gpio_led leds_gpio[] = {
-        {
-                .name = "red",
-                .default_trigger = NULL,        //"default-on", // hanapark DF15: Turn ON RED LED at boot time !
-                .gpio = GPIO_SVC_LED_RED,
-                .active_low = 0,
-        },
-        {
-                .name = "blue",
-                .default_trigger = NULL,
-                .gpio = GPIO_SVC_LED_BLUE,
-                .active_low = 0,
-        }
+	{
+		.name = "red",
+		.default_trigger = NULL, //"default-on", // hanapark DF15: Turn ON RED LED at boot time !
+		.gpio = GPIO_SVC_LED_RED,
+		.active_low = 0,
+	}, {
+		.name = "blue",
+		.default_trigger = NULL,
+		.gpio = GPIO_SVC_LED_BLUE,
+		.active_low = 0,
+	}
 };
-
 
 struct gpio_led_platform_data leds_gpio_platform_data = {
-        .num_leds = ARRAY_SIZE(leds_gpio),
-        .leds = leds_gpio,
+	.num_leds = ARRAY_SIZE(leds_gpio),
+	.leds = leds_gpio,
 };
-
 
 struct platform_device sec_device_leds_gpio = {
-        .name   = "leds-gpio",
-        .id             = -1,
-        .dev = { .platform_data = &leds_gpio_platform_data },
+	.name = "leds-gpio",
+	.id = -1,
+	.dev = {
+		.platform_data = &leds_gpio_platform_data
+	},
 };
-
 
 static struct sec_jack_zone sec_jack_zones[] = {
 	{
@@ -2773,29 +2725,27 @@ static struct sec_jack_zone sec_jack_zones[] = {
 static struct sec_jack_buttons_zone sec_jack_buttons_zones[] = {
 	{
 		/* 0 <= adc <=110, stable zone */
-		.code		= KEY_MEDIA,
-		.adc_low	= 0,
-		.adc_high	= 110,
+		.code = KEY_MEDIA,
+		.adc_low = 0,
+		.adc_high = 110,
 	},
 	{
 		/* 130 <= adc <= 365, stable zone */
-		.code		= KEY_PREVIOUSSONG,
-		.adc_low	= 130,
-		.adc_high	= 365,
+		.code = KEY_PREVIOUSSONG,
+		.adc_low = 130,
+		.adc_high = 365,
 	},
 	{
 		/* 385 <= adc <= 870, stable zone */
-		.code		= KEY_NEXTSONG,
-		.adc_low	= 385,
-		.adc_high	= 870,
+		.code = KEY_NEXTSONG,
+		.adc_low = 385,
+		.adc_high = 870,
 	},
 };
 
 static int sec_jack_get_adc_value(void)
 {
-
 	//printk(" ****************** LNT DEBUG ***************** sec_jack_get_adc_value : %d \n",s3c_adc_get_adc_data(3));
-
 	return s3c_adc_get_adc_data(3);
 }
 
@@ -2822,39 +2772,34 @@ struct sec_jack_platform_data sec_jack_pdata = {
 };
 
 static struct platform_device sec_device_jack = {
-	.name			= "sec_jack",
-	.id			= 1, /* will be used also for gpio_event id */
-	.dev.platform_data	= &sec_jack_pdata,
+	.name = "sec_jack",
+	.id = 1, /* will be used also for gpio_event id */
+	.dev.platform_data = &sec_jack_pdata,
 };
-
-
-#define S3C_GPIO_SETPIN_ZERO         0
-#define S3C_GPIO_SETPIN_ONE          1
-#define S3C_GPIO_SETPIN_NONE	     2
 
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
 static void victory_power_off(void)
 {
 	int phone_wait_cnt = 0;
 
-		/* confirm phone is powered-off  */
-		while (1) {
-			if (gpio_get_value(GPIO_PHONE_ACTIVE)) {
-				pr_info("%s: Try to Turn Phone Off by CP_RST\n",
+	/* confirm phone is powered-off */
+	while (1) {
+		if (gpio_get_value(GPIO_PHONE_ACTIVE)) {
+			pr_info("%s: Try to Turn Phone Off by CP_RST\n",
 					__func__);
-				gpio_set_value(GPIO_CP_RST, 0);
-				if (phone_wait_cnt > 1) {
-					pr_info("%s: PHONE OFF Fail\n",
-					__func__);
-					break;
-				}
-				phone_wait_cnt++;
-				mdelay(100);
-			} else {
-				pr_info("%s: PHONE OFF Success\n", __func__);
+			gpio_set_value(GPIO_CP_RST, 0);
+			if (phone_wait_cnt > 1) {
+				pr_info("%s: PHONE OFF Fail\n",
+				__func__);
 				break;
 			}
+			phone_wait_cnt++;
+			mdelay(100);
+		} else {
+			pr_info("%s: PHONE OFF Success\n", __func__);
+			break;
 		}
+	}
 
 	while (1) {
 		/* Check reboot charging */
@@ -2866,14 +2811,13 @@ static void victory_power_off(void)
 			pr_crit("%s: waiting for reset!\n", __func__);
 			while (1);
 		}
-
 		/* wait for power button release */
 		if (gpio_get_value(GPIO_nPOWER)) {
 			pr_info("%s: set PS_HOLD low\n", __func__);
 
-			/* PS_HOLD high  PS_HOLD_CONTROL, R/W, 0xE010_E81C */
+			/* PS_HOLD high PS_HOLD_CONTROL, R/W, 0xE010_E81C */
 			writel(readl(S5PV210_PS_HOLD_CONTROL_REG) & 0xFFFFFEFF,
-			       S5PV210_PS_HOLD_CONTROL_REG);
+					S5PV210_PS_HOLD_CONTROL_REG);
 
 			pr_crit("%s: should not reach here!\n", __func__);
 		}
@@ -2881,58 +2825,57 @@ static void victory_power_off(void)
 		/* if power button is not released, wait and check TA again */
 		pr_info("%s: PowerButton is not released.\n", __func__);
 		mdelay(1000);
-	}	
+	}
 }
 
-static void config_gpio_table(int array_size, unsigned int (*gpio_table)[5])
+static void config_gpio_table(void)
 {
-        u32 i, gpio;
+	u32 i, gpio;
 
-        for (i = 0; i < array_size; i++) {
-                gpio = gpio_table[i][0];
-                s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(gpio_table[i][1]));
-                if (gpio_table[i][2] != S3C_GPIO_SETPIN_NONE)
-                        gpio_set_value(gpio, gpio_table[i][2]);
-                s3c_gpio_setpull(gpio, gpio_table[i][3]);
-                s3c_gpio_set_drvstrength(gpio, initial_gpio_table[i][4]);
-        }
+	for (i = 0; i < ARRAY_SIZE(victory_init_gpios); i++) {
+		gpio = victory_init_gpios[i].num;
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(victory_init_gpios[i].cfg));
+		if (victory_init_gpios[i].val != S3C_GPIO_SETPIN_NONE)
+			gpio_set_value(gpio, victory_init_gpios[i].val);
+		s3c_gpio_setpull(gpio, victory_init_gpios[i].pud);
+		s3c_gpio_set_drvstrength(gpio, victory_init_gpios[i].drv);
+	}
 }
 
 static void config_alive_gpio_table(int array_size, unsigned int (*gpio_table)[4])
 {
-        u32 i, gpio;
+	u32 i, gpio;
 
-        for (i = 0; i < array_size; i++) {
-                gpio = gpio_table[i][0];
-                s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(gpio_table[i][1]));
-                if (gpio_table[i][2] != S3C_GPIO_SETPIN_NONE)
-                        gpio_set_value(gpio, gpio_table[i][2]);
-                s3c_gpio_setpull(gpio, gpio_table[i][3]);
-        }
+	for (i = 0; i < array_size; i++) {
+		gpio = gpio_table[i][0];
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(gpio_table[i][1]));
+		if (gpio_table[i][2] != S3C_GPIO_SETPIN_NONE)
+			gpio_set_value(gpio, gpio_table[i][2]);
+		s3c_gpio_setpull(gpio, gpio_table[i][3]);
+	}
 }
-
 
 static void config_sleep_gpio_table(int array_size, unsigned int (*gpio_table)[3])
 {
-        u32 i, gpio;
+	u32 i, gpio;
 
-        for (i = 0; i < array_size; i++) {
-                gpio = gpio_table[i][0];
-                s3c_gpio_slp_cfgpin(gpio, gpio_table[i][1]);
-                s3c_gpio_slp_setpull_updown(gpio, gpio_table[i][2]);
-        }
+	for (i = 0; i < array_size; i++) {
+		gpio = gpio_table[i][0];
+		s3c_gpio_slp_cfgpin(gpio, gpio_table[i][1]);
+		s3c_gpio_slp_setpull_updown(gpio, gpio_table[i][2]);
+	}
 }
 
 static void config_init_gpio(void)
 {
-        config_gpio_table(ARRAY_SIZE(initial_gpio_table), initial_gpio_table);
+	config_gpio_table();
 }
 
 void config_sleep_gpio(void)
 {
-        config_alive_gpio_table(ARRAY_SIZE(sleep_alive_gpio_table), sleep_alive_gpio_table);
-        config_sleep_gpio_table(ARRAY_SIZE(sleep_gpio_table), sleep_gpio_table);
-	if (system_rev < 0x0A) 
+	config_alive_gpio_table(ARRAY_SIZE(victory_sleep_alive_gpio_table), victory_sleep_alive_gpio_table);
+	config_sleep_gpio_table(ARRAY_SIZE(victory_sleep_gpio_table), victory_sleep_gpio_table);
+	if (system_rev < 0x0A)
 		s3c_gpio_setpull(GPIO_PS_VOUT, S3C_GPIO_PULL_DOWN);
 }
 EXPORT_SYMBOL(config_sleep_gpio);
@@ -3043,10 +2986,10 @@ static int wlan_carddetect_en(int onoff)
 
 static struct resource wifi_resources[] = {
 	[0] = {
-		.name	= "bcm4329_wlan_irq",
-		.start	= IRQ_EINT3,  //ijihyun.jung - SEC Crespo
-		.end	= IRQ_EINT3,
-		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
+		.name = "bcm4329_wlan_irq",
+		.start = IRQ_EINT3, //ijihyun.jung - SEC Crespo
+		.end = IRQ_EINT3,
+		.flags = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 	},
 };
 
@@ -3071,10 +3014,10 @@ static void *victory_mem_prealloc(int section, unsigned long size)
 	return wifi_mem_array[section].mem_ptr;
 }
 
-#define DHD_SKB_HDRSIZE 		336
-#define DHD_SKB_1PAGE_BUFSIZE	((PAGE_SIZE*1)-DHD_SKB_HDRSIZE)
-#define DHD_SKB_2PAGE_BUFSIZE	((PAGE_SIZE*2)-DHD_SKB_HDRSIZE)
-#define DHD_SKB_4PAGE_BUFSIZE	((PAGE_SIZE*4)-DHD_SKB_HDRSIZE)
+#define DHD_SKB_HDRSIZE       336
+#define DHD_SKB_1PAGE_BUFSIZE ((PAGE_SIZE*1)-DHD_SKB_HDRSIZE)
+#define DHD_SKB_2PAGE_BUFSIZE ((PAGE_SIZE*2)-DHD_SKB_HDRSIZE)
+#define DHD_SKB_4PAGE_BUFSIZE ((PAGE_SIZE*4)-DHD_SKB_HDRSIZE)
 int __init victory_init_wifi_mem(void)
 {
 	int i;
@@ -3085,13 +3028,13 @@ int __init victory_init_wifi_mem(void)
 		if (!wlan_static_skb[i])
 			goto err_skb_alloc;
 	}
-	
+
 	for (; i < 16; i++) {
 		wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_2PAGE_BUFSIZE);
 		if (!wlan_static_skb[i])
 			goto err_skb_alloc;
 	}
-	
+
 	wlan_static_skb[i] = dev_alloc_skb(DHD_SKB_4PAGE_BUFSIZE);
 	if (!wlan_static_skb[i])
 		goto err_skb_alloc;
@@ -3120,18 +3063,18 @@ int __init victory_init_wifi_mem(void)
 	return -ENOMEM;
 }
 static struct wifi_platform_data wifi_pdata = {
-	.set_power		= wlan_power_en,
-	.set_reset		= wlan_reset_en,
-	.set_carddetect		= wlan_carddetect_en,
-	.mem_prealloc		= victory_mem_prealloc,
+	.set_power = wlan_power_en,
+	.set_reset = wlan_reset_en,
+	.set_carddetect = wlan_carddetect_en,
+	.mem_prealloc = victory_mem_prealloc,
 };
 
 static struct platform_device sec_device_wifi = {
-	.name			= "bcm4329_wlan",
-	.id			= 1,
-	.num_resources		= ARRAY_SIZE(wifi_resources),
-	.resource		= wifi_resources,
-	.dev			= {
+	.name = "bcm4329_wlan",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(wifi_resources),
+	.resource = wifi_resources,
+	.dev = {
 		.platform_data = &wifi_pdata,
 	},
 };
@@ -3146,7 +3089,9 @@ static struct platform_device *victory_devices[] __initdata = {
 #ifdef CONFIG_FIQ_DEBUGGER
 	&s5pv210_device_fiqdbg_uart2,
 #endif
+#ifdef CONFIG_MTD_ONENAND
 	&s5p_device_onenand,
+#endif
 #ifdef CONFIG_RTC_DRV_S3C
 	&s5p_device_rtc,
 #endif
@@ -3162,7 +3107,7 @@ static struct platform_device *victory_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_MFC50
 	&s3c_device_mfc,
 #endif
-#ifdef	CONFIG_S5P_ADC
+#ifdef CONFIG_S5P_ADC
 	&s3c_device_adc,
 #endif
 	&sec_device_dpram,
@@ -3194,7 +3139,7 @@ static struct platform_device *victory_devices[] __initdata = {
 	&victory_device_i2c4,
 	&victory_device_i2c5,
 	&victory_device_i2c6,
-	&victory_device_i2c9,  /* max1704x:fuel_guage */
+	&victory_device_i2c9, /* max1704x:fuel_guage */
 	&victory_device_i2c11, /* optical sensor */
 	&victory_device_i2c12, /* MAX8893 PMIC */
 #ifdef CONFIG_USB_GADGET
@@ -3227,7 +3172,7 @@ static struct platform_device *victory_devices[] __initdata = {
 	&sec_device_battery,
 	&sec_device_leds_gpio,
 	&victory_device_i2c10,
-	&sec_device_switch,  // samsung switch driver
+	&sec_device_switch, // samsung switch driver
 
 #ifdef CONFIG_S5PV210_POWER_DOMAIN
 	&s5pv210_pd_audio,
@@ -3260,7 +3205,7 @@ static struct platform_device *victory_devices[] __initdata = {
 	&ram_console_device,
 	&sec_device_wifi,
 	&samsung_asoc_dma,
-    &s3c_device_8893consumer,
+	&s3c_device_8893consumer,
 };
 
 static void __init victory_map_io(void)
@@ -3298,15 +3243,13 @@ static void __init victory_fixup(struct machine_desc *desc,
 	/* 1M for ram_console buffer */
 	mi->bank[2].size = 127 * SZ_1M;
 	mi->nr_banks = 3;
-
 	ram_console_start = mi->bank[2].start + mi->bank[2].size;
 	ram_console_size = SZ_1M - SZ_4K;
 #else
-    mi->bank[1].start = 0x40000000;
+	mi->bank[1].start = 0x40000000;
 	mi->bank[1].size = 255 * SZ_1M;
-
-    mi->nr_banks = 2;
-    ram_console_start = mi->bank[1].start + mi->bank[1].size;
+	mi->nr_banks = 2;
+	ram_console_start = mi->bank[1].start + mi->bank[1].size;
 	ram_console_size = SZ_1M - SZ_4K;
 #endif
 	/* Leave 1K at 0x57fff000 for kexec hardboot page. */
@@ -3348,7 +3291,6 @@ int hw_version_check(void)
 }
 EXPORT_SYMBOL(hw_version_check);
 
-
 static void __init fsa9480_gpio_init(void)
 {
 	s3c_gpio_cfgpin(GPIO_UART_SEL, S3C_GPIO_OUTPUT);
@@ -3364,7 +3306,7 @@ static void __init fsa9480_gpio_init(void)
 	gpio_set_value(GPIO_USB_HS_SW_EN_N, 0/*level= low*/);
 }
 
-static void __init max8998_gpio_init(void) 
+static void __init max8998_gpio_init(void)
 {
 	s3c_gpio_cfgpin(GPIO_AP_PMIC_IRQ, S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(GPIO_AP_PMIC_IRQ, S3C_GPIO_PULL_NONE);
@@ -3398,7 +3340,7 @@ static void __init sound_init(void)
 	gpio_request(GPIO_MICBIAS_EN, "micbias_enable");
 }
 
-static void __init onenand_init()
+static void __init onenand_init(void)
 {
 	struct clk *clk = clk_get(NULL, "onenand");
 	BUG_ON(!clk);
@@ -3409,7 +3351,7 @@ static void __init qt_touch_init(void)
 {
 	int gpio, irq;
 
-	gpio = GPIO_TOUCH_EN; 
+	gpio = GPIO_TOUCH_EN;
 	gpio_request(gpio, "TOUCH_EN");
 	s3c_gpio_cfgpin(gpio, S3C_GPIO_OUTPUT);
 	gpio_direction_output(gpio, 0);
@@ -3423,30 +3365,21 @@ static void __init qt_touch_init(void)
 	gpio_free(gpio);
 
 	i2c_devs2[1].irq = irq;
-
 }
-
-static void k3g_irq_init(void)
-{
-        i2c_devs0[0].irq = (system_rev >= 0x0A) ? IRQ_EINT(29) : -1;
-}
-
 
 static void __init victory_machine_init(void)
 {
 	setup_ram_console_mem();
-/*
- *	s3c_usb_set_serial();
- */
+	//s3c_usb_set_serial();
 	platform_add_devices(victory_devices, ARRAY_SIZE(victory_devices));
-        printk(KERN_EMERG "VICTORY 3.0 The **************SYSTEM_REV********** is 0x%x\n",system_rev);
+	printk(KERN_EMERG "VICTORY 3.0 The **************SYSTEM_REV********** is 0x%x\n",system_rev);
 	/* Find out S5PC110 chip version */
 	_hw_version_check();
 
 	pm_power_off = victory_power_off ;
 
 	/*initialise the gpio's*/
-        config_init_gpio();
+	config_init_gpio();
 #ifdef CONFIG_ANDROID_PMEM
 	android_pmem_set_platdata();
 #endif
@@ -3466,7 +3399,7 @@ static void __init victory_machine_init(void)
 #endif
 	/* camera */
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
-        fsa9480_gpio_init();
+	fsa9480_gpio_init();
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 	/* Touch Screen qt602240 */
 	qt_touch_init();
@@ -3478,7 +3411,7 @@ static void __init victory_machine_init(void)
 
 	max8998_gpio_init();
 	i2c_register_board_info(6, i2c_devs6, ARRAY_SIZE(i2c_devs6));
-	
+
 	/* Touch Key */
 	i2c_register_board_info(10, i2c_devs10, ARRAY_SIZE(i2c_devs10));
 
@@ -3487,6 +3420,7 @@ static void __init victory_machine_init(void)
 	gp2a_gpio_init();
 	i2c_register_board_info(11, i2c_devs11, ARRAY_SIZE(i2c_devs11));
 
+	pwm_gpio_init();
 	/* MAX8893 PMIC */
 	i2c_register_board_info(12, i2c_devs12, ARRAY_SIZE(i2c_devs12));
 
@@ -3537,7 +3471,7 @@ static void __init victory_machine_init(void)
 	s5pv210_cpufreq_set_platdata(&smdkc110_cpufreq_plat);
 #endif
 
-//	regulator_has_full_constraints();
+	//regulator_has_full_constraints();
 
 	register_reboot_notifier(&victory_reboot_notifier);
 
@@ -3548,11 +3482,10 @@ static void __init victory_machine_init(void)
 	victory_init_wifi_mem();
 
 	onenand_init();
-	#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	/* soonyong.cho : This is for setting unique serial number */
-        s3c_usb_set_serial();
-    #endif
-
+	s3c_usb_set_serial();
+#endif
 
 	if (gpio_is_valid(GPIO_MSENSE_nRST)) {
 		if (gpio_request(GPIO_MSENSE_nRST, "GPD0"))
@@ -3638,15 +3571,15 @@ EXPORT_SYMBOL(usb_host_phy_off);
 #endif
 
 MACHINE_START(VICTORY, "Victory")
-	.boot_params	= S5P_PA_SDRAM + 0x100,
-	.fixup		= victory_fixup,
-	.init_irq	= s5pv210_init_irq,
-	.map_io		= victory_map_io,
-	.init_machine	= victory_machine_init,
+	.boot_params = S5P_PA_SDRAM + 0x100,
+	.fixup = victory_fixup,
+	.init_irq = s5pv210_init_irq,
+	.map_io = victory_map_io,
+	.init_machine = victory_machine_init,
 #ifdef CONFIG_S5P_HIGH_RES_TIMERS
-	.timer		= &s5p_systimer,
+	.timer = &s5p_systimer,
 #else
-	.timer		= &s5p_timer,
+	.timer = &s5p_timer,
 #endif
 MACHINE_END
 

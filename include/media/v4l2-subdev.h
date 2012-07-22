@@ -145,7 +145,6 @@ struct v4l2_subdev_io_pin_config {
 struct v4l2_subdev_core_ops {
 	int (*g_chip_ident)(struct v4l2_subdev *sd, struct v4l2_dbg_chip_ident *chip);
 	int (*log_status)(struct v4l2_subdev *sd);
-	int (*s_config)(struct v4l2_subdev *sd, int irq, void *platform_data);
 	int (*s_io_pin_config)(struct v4l2_subdev *sd, size_t n,
 				      struct v4l2_subdev_io_pin_config *pincfg);
 	int (*init)(struct v4l2_subdev *sd, u32 val);

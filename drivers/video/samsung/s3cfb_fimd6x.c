@@ -421,15 +421,15 @@ int s3cfb_window_on(struct s3cfb_global *ctrl, int id)
 	struct s3c_platform_fb *pdata = to_fb_plat(ctrl->dev);
 	u32 cfg;
 
-	cfg = readl(ctrl->regs + S3C_WINCON(id));
-	cfg |= S3C_WINCON_ENWIN_ENABLE;
-	writel(cfg, ctrl->regs + S3C_WINCON(id));
-
 	if (pdata->hw_ver == 0x62) {
 		cfg = readl(ctrl->regs + S3C_WINSHMAP);
 		cfg |= S3C_WINSHMAP_CH_ENABLE(id);
 		writel(cfg, ctrl->regs + S3C_WINSHMAP);
 	}
+
+	cfg = readl(ctrl->regs + S3C_WINCON(id));
+	cfg |= S3C_WINCON_ENWIN_ENABLE;
+	writel(cfg, ctrl->regs + S3C_WINCON(id));
 
 	dev_dbg(ctrl->dev, "[fb%d] turn on\n", id);
 
@@ -611,6 +611,18 @@ int s3cfb_set_buffer_address(struct s3cfb_global *ctrl, int id)
 		id, start_addr, end_addr);
 
 	return 0;
+}
+
+int s3cfb_set_alpha_value_width(struct s3cfb_global *ctrl, int id)
+{
+       struct fb_info *fb = ctrl->fb[id];
+       struct fb_var_screeninfo *var = &fb->var;
+
+       if (var->bits_per_pixel == 32 && var->transp.length > 0)
+               writel(1, ctrl->regs + S3C_BLENDCON);
+       else
+               writel(0, ctrl->regs + S3C_BLENDCON);
+
 }
 
 int s3cfb_set_alpha_blending(struct s3cfb_global *ctrl, int id)

@@ -13,7 +13,6 @@
 #include <linux/rtc.h>
 #include <linux/completion.h>
 #include <media/v4l2-device.h>
-#include <media/v4l2-i2c-drv.h>
 #include <media/ce147_platform.h>
 
 #ifdef CONFIG_VIDEO_SAMSUNG_V4L2
@@ -44,7 +43,7 @@
 
 /* Default resolution & pixelformat. plz ref ce147_platform.h */
 #define	DEFAULT_PIX_FMT		V4L2_PIX_FMT_UYVY	/* YUV422 */
-#define	DEFUALT_MCLK		24000000
+#define	DEFAULT_MCLK		24000000
 #define	POLL_TIME_MS		10
 
 /* Camera ISP command */
@@ -359,13 +358,10 @@ struct ce147_state {
 
 static int condition;
 
-static const struct v4l2_fmtdesc capture_fmts[] = {
+static const struct v4l2_mbus_framefmt capture_fmts[] = {
 	{
-		.index		= 0,
-		.type		= V4L2_BUF_TYPE_VIDEO_CAPTURE,
-		.flags		= FORMAT_FLAGS_COMPRESSED,
-		.description	= "JPEG	+ Postview",
-		.pixelformat	= V4L2_PIX_FMT_JPEG,
+		.code		= V4L2_MBUS_FMT_FIXED,
+		.colorspace	= V4L2_COLORSPACE_JPEG,
 	},
 };
 
@@ -4513,25 +4509,28 @@ static int ce147_set_framesize_index(struct v4l2_subdev *sd,
  * pixel_format -> to be handled in the	upper layer
  *
  * */
-static int ce147_s_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_s_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 {
 	int err = 0;
 	struct ce147_state *state = to_state(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int framesize_index = -1;
 
-	if (fmt->fmt.pix.pixelformat == V4L2_PIX_FMT_JPEG
-			&& fmt->fmt.pix.colorspace != V4L2_COLORSPACE_JPEG) {
+	if (fmt->code == V4L2_MBUS_FMT_FIXED
+			&& fmt->colorspace != V4L2_COLORSPACE_JPEG) {
 		dev_err(&client->dev, "%s: mismatch in pixelformat and "
 				"colorspace\n", __func__);
 		return -EINVAL;
 	}
 
-	state->pix.width = fmt->fmt.pix.width;
-	state->pix.height = fmt->fmt.pix.height;
-	state->pix.pixelformat = fmt->fmt.pix.pixelformat;
+	state->pix.width = fmt->width;
+	state->pix.height = fmt->height;
+	if (fmt->colorspace == V4L2_COLORSPACE_JPEG)
+		state->pix.pixelformat = V4L2_PIX_FMT_JPEG;
+	else
+		state->pix.pixelformat = 0; /* is this used anywhere? */
 
-	if (fmt->fmt.pix.colorspace == V4L2_COLORSPACE_JPEG)
+	if (fmt->colorspace == V4L2_COLORSPACE_JPEG)
 		state->oprmode = CE147_OPRMODE_IMAGE;
 	else
 		state->oprmode = CE147_OPRMODE_VIDEO;
@@ -4607,33 +4606,38 @@ static int ce147_enum_frameintervals(struct v4l2_subdev *sd,
 	return err;
 }
 
-static int ce147_enum_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmtdesc)
+static int ce147_enum_mbus_fmt(struct v4l2_subdev *sd, unsigned int index,
+				  enum v4l2_mbus_pixelcode *code)
 {
-	int num_entries;
+	pr_debug("%s: index = %d\n", __func__, index);
 
-	num_entries = sizeof(capture_fmts) / sizeof(struct v4l2_fmtdesc);
-
-	if (fmtdesc->index >= num_entries)
+	if (index >= ARRAY_SIZE(capture_fmts))
 		return -EINVAL;
 
-	memset(fmtdesc, 0, sizeof(*fmtdesc));
-	memcpy(fmtdesc, &capture_fmts[fmtdesc->index], sizeof(*fmtdesc));
+	*code = capture_fmts[index].code;
 
 	return 0;
 }
 
-static int ce147_try_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_try_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 {
 	int num_entries;
 	int i;
 
-	num_entries = sizeof(capture_fmts) / sizeof(struct v4l2_fmtdesc);
+	num_entries = ARRAY_SIZE(capture_fmts);
+
+	pr_debug("%s: code = 0x%x, colorspace = 0x%x, num_entries = %d\n",
+	  __func__, fmt->code, fmt->colorspace, num_entries);
 
 	for (i = 0; i < num_entries; i++) {
-		if (capture_fmts[i].pixelformat == fmt->fmt.pix.pixelformat)
+		if (capture_fmts[i].code == fmt->code &&
+			  capture_fmts[i].colorspace == fmt->colorspace) {
+			pr_debug("%s: match found, returning 0\n", __func__);
 			return 0;
+		}
 	}
 
+	pr_debug("%s: no match found, returning -EINVAL\n", __func__);
 	return -EINVAL;
 }
 
@@ -5490,54 +5494,8 @@ static int ce147_init(struct v4l2_subdev *sd, u32 val)
 	return 0;
 }
 
-/*
- * s_config subdev ops
- * With camera device, we need to re-initialize every single opening time
- * therefor, it is not necessary to be initialized on probe time.
- * except for version checking
- * NOTE: version checking is optional
- */
-static int ce147_s_config(struct v4l2_subdev *sd, int irq, void *platform_data)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ce147_state *state = to_state(sd);
-	struct ce147_platform_data *pdata;
-
-	pdata =	client->dev.platform_data;
-
-	if (!pdata) {
-		dev_err(&client->dev, "%s: no platform data\n", __func__);
-		return -ENODEV;
-	}
-
-	/*
-	 * Assign default format and resolution
-	 * Use configured default information in platform data
-	 * or without them, use default information in driver
-	 */
-	if (!(pdata->default_width && pdata->default_height)) {
-		/* TODO: assign driver default resolution */
-	} else {
-		state->pix.width = pdata->default_width;
-		state->pix.height = pdata->default_height;
-	}
-
-	if (!pdata->pixelformat)
-		state->pix.pixelformat = DEFAULT_PIX_FMT;
-	else
-		state->pix.pixelformat = pdata->pixelformat;
-
-	if (!pdata->freq)
-		state->freq = DEFUALT_MCLK;	/* 24MHz default */
-	else
-		state->freq = pdata->freq;
-
-	return 0;
-}
-
 static const struct v4l2_subdev_core_ops ce147_core_ops = {
 	.init		= ce147_init,		/* initializing API */
-	.s_config	= ce147_s_config,	/* Fetch platform data */
 	.queryctrl	= ce147_queryctrl,
 	.querymenu	= ce147_querymenu,
 	.g_ctrl		= ce147_g_ctrl,
@@ -5562,16 +5520,17 @@ static const struct v4l2_subdev_ops ce147_ops = {
 	.video	= &ce147_video_ops,
 };
 
-/*
- * ce147_probe
- * Fetching platform data is being done with s_config subdev call.
- * In probe routine, we	just register subdev device
- */
 static int ce147_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct ce147_state *state;
+	struct ce147_platform_data *pdata = client->dev.platform_data;
 	struct v4l2_subdev *sd;
+
+	if (pdata == NULL) {
+		dev_err(&client->dev, "%s: bad platform data\n", __func__);
+		return -ENODEV;
+	}
 
 	state = kzalloc(sizeof(struct ce147_state), GFP_KERNEL);
 	if (state == NULL)
@@ -5586,6 +5545,24 @@ static int ce147_probe(struct i2c_client *client,
 
 	sd = &state->sd;
 	strcpy(sd->name, CE147_DRIVER_NAME);
+
+	/*
+	 * Assign default format and resolution
+	 * Use configured default information in platform data
+	 * or without them, use default information in driver
+	 */
+	state->pix.width = pdata->default_width;
+	state->pix.height = pdata->default_height;
+
+	if (!pdata->pixelformat)
+		state->pix.pixelformat = DEFAULT_PIX_FMT;
+	else
+		state->pix.pixelformat = pdata->pixelformat;
+
+	if (!pdata->freq)
+		state->freq = DEFAULT_MCLK;	/* 24MHz default */
+	else
+		state->freq = pdata->freq;
 
 	/* Registering subdev */
 	v4l2_i2c_subdev_init(sd, client, &ce147_ops);
@@ -5636,12 +5613,25 @@ static const struct i2c_device_id ce147_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ce147_id);
 
-static struct v4l2_i2c_driver_data v4l2_i2c_data = {
-	.name	= CE147_DRIVER_NAME,
+static struct i2c_driver v4l2_i2c_driver = {
+	.driver.name	= CE147_DRIVER_NAME,
 	.probe	= ce147_probe,
 	.remove	= ce147_remove,
 	.id_table = ce147_id,
 };
+
+static int __init v4l2_i2c_drv_init(void)
+{
+	return i2c_add_driver(&v4l2_i2c_driver);
+}
+
+static void __exit v4l2_i2c_drv_cleanup(void)
+{
+	i2c_del_driver(&v4l2_i2c_driver);
+}
+
+module_init(v4l2_i2c_drv_init);
+module_exit(v4l2_i2c_drv_cleanup);
 
 MODULE_DESCRIPTION("NEC CE147-NEC 5MP camera driver");
 MODULE_AUTHOR("Tushar Behera <tushar.b@samsung.com>");

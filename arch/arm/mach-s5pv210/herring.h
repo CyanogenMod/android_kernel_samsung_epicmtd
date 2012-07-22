@@ -21,7 +21,11 @@ extern void s3c_setup_uart_cfg_gpio(unsigned char port);
 # define herring_is_cdma_wimax_rev0() herring_is_cdma_wimax_rev(0)
 # define herring_is_tft_dev() (machine_is_herring() && (system_rev >= 0x30))
 #else
+#ifdef CONFIG_MACH_VICTORY
+# define herring_is_cdma_wimax_dev() (1)
+#else
 # define herring_is_cdma_wimax_dev() (0)
+#endif
 # define herring_is_cdma_wimax_rev0() (0)
 # define herring_is_cdma_wimax_rev(n) (0)
 # define herring_is_tft_dev() (0)

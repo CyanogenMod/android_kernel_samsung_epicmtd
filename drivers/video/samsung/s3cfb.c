@@ -39,21 +39,62 @@
 #include <linux/suspend.h>
 #endif
 #include "s3cfb.h"
-#ifdef CONFIG_FB_S3C_SPLASH_SCREEN
-#ifdef CONFIG_MACH_VICTORY
 #include "logo_rgb24_wvga_portrait.h"
-#include <mach/regs-clock.h>
-#define BOOT_FB_WINDOW	0
-#endif
-#endif
 #ifdef CONFIG_FB_S3C_MDNIE
 #include "s3cfb_mdnie.h"
 #include <linux/delay.h>
+#include <mach/regs-clock.h>
 #endif
+#include <plat/media.h>
+#define BOOT_FB_WINDOW	0
 
 #if (CONFIG_FB_S3C_NUM_OVLY_WIN >= CONFIG_FB_S3C_DEFAULT_WINDOW)
 #error "FB_S3C_NUM_OVLY_WIN should be less than FB_S3C_DEFAULT_WINDOW"
 #endif
+
+/*
+ *  Mark for GetLog (tkhwang)
+ */
+#if defined (CONFIG_FB_S3C_TL2796)
+extern void tl2796_ldi_stand_by(void);
+extern void tl2796_ldi_wake_up(void);
+#elif defined(CONFIG_FB_S3C_S6D16A0X)
+extern void s6d16a0x_ldi_stand_by(void);
+extern void s6d16a0x_ldi_wake_up(void);
+void lcd_cfg_gpio_early_suspend(void);
+void lcd_cfg_gpio_late_resume(void);
+void s6d16a0x_ldi_disable(void);
+void s6d16a0x_ldi_init(void);
+void s6d16a0x_ldi_enable(void);
+#endif
+struct struct_frame_buf_mark {
+	u32 special_mark_1;
+	u32 special_mark_2;
+	u32 special_mark_3;
+	u32 special_mark_4;
+	void *p_fb;
+	u32 resX;
+	u32 resY;
+	u32 bpp;    //color depth : 16 or 24
+	u32 frames; // frame buffer count : 2
+};
+
+static struct struct_frame_buf_mark  frame_buf_mark = {
+	.special_mark_1 = (('*' << 24) | ('^' << 16) | ('^' << 8) | ('*' << 0)),
+	.special_mark_2 = (('I' << 24) | ('n' << 16) | ('f' << 8) | ('o' << 0)),
+	.special_mark_3 = (('H' << 24) | ('e' << 16) | ('r' << 8) | ('e' << 0)),
+	.special_mark_4 = (('f' << 24) | ('b' << 16) | ('u' << 8) | ('f' << 0)),
+	.p_fb   = 0,
+#ifdef CONFIG_MACH_FORTE
+	.resX   = 320, 
+	.resY   = 480, 
+#else
+	.resX   = 480,
+	.resY   = 800,
+#endif
+	.bpp    = 32,
+	.frames = 2
+};
 
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
 {
@@ -62,7 +103,7 @@ struct s3c_platform_fb *to_fb_plat(struct device *dev)
 	return (struct s3c_platform_fb *)pdev->dev.platform_data;
 }
 
-char LCD_ON_OFF = 1;
+char LCD_ON_OFF = 1; 
 static unsigned int bootloaderfb;
 module_param_named(bootloaderfb, bootloaderfb, uint, 0444);
 MODULE_PARM_DESC(bootloaderfb, "Address of booting logo image in Bootloader");
@@ -115,7 +156,7 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 	}
 #endif  /* CONFIG_MACH_VICTORY */
 #endif
-#ifndef CONFIG_MACH_VICTORY
+/*
 	if (bootloaderfb) {
 		u8 *logo_virt_buf;
 		logo_virt_buf = ioremap_nocache(bootloaderfb,
@@ -125,7 +166,11 @@ static int s3cfb_draw_logo(struct fb_info *fb)
 				fb->var.yres * fb->fix.line_length);
 		iounmap(logo_virt_buf);
 	}
-#endif
+*/
+	/*if (readl(S5P_INFORM5)) //LPM_CHARGING mode
+		memcpy(fb->screen_base, charging, fb->var.yres * fb->fix.line_length);
+	else
+		//memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);*/
 	return 0;
 }
 #endif
@@ -193,9 +238,9 @@ static int s3cfb_map_video_memory(struct fb_info *fb)
 		return 0;
 
 	if (pdata && pdata->pmem_start[win->id] &&
-			(pdata->pmem_size[win->id] >= fix->smem_len)) {
-		fix->smem_start = pdata->pmem_start[win->id];
-		fb->screen_base = ioremap_wc(fix->smem_start, pdata->pmem_size[win->id]);
+	    (pdata->pmem_size[win->id] >= fix->smem_len)) {
+	  fix->smem_start = pdata->pmem_start[win->id];
+	  fb->screen_base = ioremap_wc(fix->smem_start, pdata->pmem_size[win->id]);
 	} else
 		fb->screen_base = dma_alloc_writecombine(fbdev->dev,
 						 PAGE_ALIGN(fix->smem_len),
@@ -210,8 +255,14 @@ static int s3cfb_map_video_memory(struct fb_info *fb)
 			 (unsigned int)fix->smem_start,
 			 (unsigned int)fb->screen_base, fix->smem_len);
 
-	memset(fb->screen_base, 0, fix->smem_len);
+	//memset(fb->screen_base, 0, fix->smem_len);
 	win->owner = DMA_MEM_FIMD;
+
+	/*
+	 *  Mark for GetLog (tkhwang)
+	 */
+
+   	frame_buf_mark.p_fb = pdata->pmem_start;
 
 	return 0;
 }
@@ -255,9 +306,9 @@ static int s3cfb_unmap_video_memory(struct fb_info *fb)
 
 	if (fix->smem_start) {
 		if (win->owner == DMA_MEM_FIMD) {
-			if (pdata && pdata->pmem_start[win->id] &&
-					(pdata->pmem_size[win->id] >= fix->smem_len))
-				iounmap(fb->screen_base);
+		  if (pdata && pdata->pmem_start[win->id] &&
+		      (pdata->pmem_size[win->id] >= fix->smem_len))
+                    iounmap(fb->screen_base);
 			else
 				dma_free_writecombine(fbdev->dev, fix->smem_len,
 					      fb->screen_base, fix->smem_start);
@@ -968,6 +1019,39 @@ static int s3cfb_wait_for_vsync_thread(void *data)
 static DEVICE_ATTR(win_power, S_IRUGO | S_IWUSR,
 		   s3cfb_sysfs_show_win_power, s3cfb_sysfs_store_win_power);
 
+static int s3cfb_sysfs_show_lcd_power(struct device *dev, struct device_attribute *attr, char *buf)
+{
+        return ;
+}
+
+static int s3cfb_sysfs_store_lcd_power(struct device *dev, struct device_attribute *attr, const char *buf, size_t len)
+{
+        if (len < 1)
+                return -EINVAL;
+#if defined(CONFIG_FB_S3C_TL2796)
+        if (strnicmp(buf, "on", 2) == 0 || strnicmp(buf, "1", 1) == 0)
+                tl2796_ldi_wake_up();
+        else if (strnicmp(buf, "off", 3) == 0 || strnicmp(buf, "0", 1) == 0)
+                tl2796_ldi_stand_by();
+        else
+                return -EINVAL;
+#elif defined(CONFIG_FB_S3C_S6D16A0X)
+        if (strnicmp(buf, "on", 2) == 0 || strnicmp(buf, "1", 1) == 0)
+                s6d16a0x_ldi_wake_up();
+        else if (strnicmp(buf, "off", 3) == 0 || strnicmp(buf, "0", 1) == 0)
+                s6d16a0x_ldi_stand_by();
+        else
+                return -EINVAL;
+#endif
+
+
+        return len;
+}
+
+
+static DEVICE_ATTR(lcd_power, 0664,s3cfb_sysfs_show_lcd_power,s3cfb_sysfs_store_lcd_power);
+
+
 static int __devinit s3cfb_probe(struct platform_device *pdev)
 {
 	struct s3c_platform_fb *pdata;
@@ -1079,24 +1163,27 @@ static int __devinit s3cfb_probe(struct platform_device *pdev)
 		goto err_register;
 	}
 
+	frame_buf_mark.bpp = fbdev->fb[pdata->default_win]->var.bits_per_pixel;
+
+
 	s3cfb_set_clock(fbdev);
 #ifdef CONFIG_FB_S3C_MDNIE
 	mDNIe_Mode_Set();
 #endif 
 
-#ifdef CONFIG_MACH_VICTORY
 	if (pdata->default_win != BOOT_FB_WINDOW)	{
 		dev_warn(fbdev->dev, "closing bootloader FIMD window 0\n", BOOT_FB_WINDOW);
-		s3cfb_set_window(fbdev, BOOT_FB_WINDOW, 0);
+		s3cfb_set_window(fbdev, BOOT_FB_WINDOW, 0);		
 	}
-#endif
 
 	s3cfb_set_window(fbdev, pdata->default_win, 1);
+
+	s3cfb_set_alpha_value_width(fbdev, pdata->default_win);
 
 	s3cfb_display_on(fbdev);
 
 	fbdev->irq = platform_get_irq(pdev, 0);
-	if (request_irq(fbdev->irq, s3cfb_irq_frame, IRQF_SHARED,
+	if (request_irq(fbdev->irq, s3cfb_irq_frame,IRQF_SHARED,
 			pdev->name, fbdev)) {
 		dev_err(fbdev->dev, "request_irq failed\n");
 		ret = -EINVAL;
@@ -1108,10 +1195,10 @@ static int __devinit s3cfb_probe(struct platform_device *pdev)
 	if (pdata->backlight_on)
 		pdata->backlight_on(pdev);
 #endif
-#ifndef CONFIG_MACH_VICTORY
+/*
 	if (!bootloaderfb && pdata->reset_lcd)
 		pdata->reset_lcd(pdev);
-#endif
+*/	
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1127,6 +1214,9 @@ static int __devinit s3cfb_probe(struct platform_device *pdev)
 		dev_err(fbdev->dev, "failed to run vsync thread\n");
 		fbdev->vsync_thread = NULL;
 	}
+	ret = device_create_file(&(pdev->dev), &dev_attr_lcd_power);
+        if (ret < 0)
+            dev_err(fbdev->dev, "s3cfb: failed to add dev_attr_lcd_power\n");
 
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
 	if (ret < 0)
@@ -1235,7 +1325,9 @@ void s3cfb_early_suspend(struct early_suspend *h)
 		container_of(h, struct s3cfb_global, early_suspend);
 
 	pr_debug("s3cfb_early_suspend is called\n");
-
+#if defined(CONFIG_FB_S3C_S6D16A0X)
+       s6d16a0x_ldi_disable();
+#endif
 #ifdef CONFIG_FB_S3C_MDNIE
 	writel(0,fbdev->regs + 0x27c);
 	msleep(20);
@@ -1269,7 +1361,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 	struct s3cfb_window *win;
 	int i, j, ret;
 
-	pr_info("s3cfb_late_resume is called\n");
+        pr_info("s3cfb_late_resume is called\n");
 
 	ret = regulator_enable(fbdev->regulator);
 	if (ret < 0)
@@ -1302,6 +1394,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 	s3c_mdnie_init_global(fbdev);
 	s3c_mdnie_start(fbdev);
 #endif
+	s3cfb_set_alpha_value_width(fbdev, pdata->default_win);
 	s3cfb_display_on(fbdev);
 
 	for (i = pdata->default_win;
@@ -1314,15 +1407,19 @@ void s3cfb_late_resume(struct early_suspend *h)
 				s3cfb_set_window(fbdev, win->id, 1);
 			}
 	}
-
-	s3cfb_set_vsync_interrupt(fbdev, 1);
+	
+        s3cfb_set_vsync_interrupt(fbdev, 1);
 	s3cfb_set_global_interrupt(fbdev, 1);
-
-	if (pdata->backlight_on)
+#if defined(CONFIG_FB_S3C_S6D16A0X) 
+        s6d16a0x_ldi_init();
+        s6d16a0x_ldi_enable();
+#endif
+        if (pdata->backlight_on)
 		pdata->backlight_on(pdev);
-
+#if !defined(CONFIG_FB_S3C_S6D16A0X)
 	if (pdata->reset_lcd)
 		pdata->reset_lcd(pdev);
+#endif
 
 	pr_info("s3cfb_late_resume is complete\n");
 	return ;

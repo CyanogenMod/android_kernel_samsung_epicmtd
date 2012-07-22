@@ -27,6 +27,8 @@
 #include <linux/input.h>
 #include <linux/earlysuspend.h>
 #include <linux/input/cypress-touchkey.h>
+#include <linux/mutex.h>
+#include <linux/workqueue.h>
 
 #if defined CONFIG_MACH_VICTORY
 #include <mach/gpio.h>
@@ -45,8 +47,9 @@
 
 #define DEVICE_NAME "cypress-touchkey"
 
-
-
+#ifdef CONFIG_MACH_VICTORY
+#define BACKLIGHT_DELAYS 1
+#endif
 
 struct cypress_touchkey_devdata {
 	struct i2c_client *client;
@@ -59,9 +62,49 @@ struct cypress_touchkey_devdata {
 	bool is_powering_on;
 	bool has_legacy_keycode;
 	bool is_delay_led_on;
+	bool is_backlight_on;
+	bool is_key_pressed;
+	bool is_bl_disabled;
+	struct mutex mutex;
+#ifdef BACKLIGHT_DELAYS
+	struct delayed_work key_off_work;
+#endif
 };
 
 struct cypress_touchkey_devdata *devdata_led;
+
+/* Backlight key-off delay:
+ *
+ * Milliseconds to wait between when a key is released and when the
+ * backlight is turned off.  Used to turn the backlight off following a key
+ * press when the "buttons" light is already disabled in liblight.  Since
+ * the backlight turns on automatically when a key is pressed (released),
+ * in absence of liblight/framework intervention, the backlight will stay
+ * on until explicitly turned off.
+ *
+ * Behavior of values:
+ *   0 - 112: Backlight stays on indefinitely (the backlight take long
+ *            enough to turn on that the explicit off has no effect).
+ * 114 - 133: The non-pressed keys briefly light, the pressed key is dark.
+ * 134 - inf: The non-pressed keys light first, then the pressed key
+ *            lights, until the backlight is turned off. */
+#ifdef BACKLIGHT_DELAYS
+static       unsigned int key_off_delay     =  750;
+static const unsigned int key_off_delay_max = 1000;
+#endif
+
+/* Backlight late-resume on/off delay:
+ *
+ * Milliseconds to wait between when the controller is powered-on in
+ * late-resume and the backlight is turned on (or off, if it's on by
+ * default).  On victory, the controller is powered-on during qt602240's
+ * late-resume, so no delay is necessary. */
+#ifdef BACKLIGHT_DELAYS
+static       unsigned int resume_delay     =    0;
+static const unsigned int resume_delay_max = 1000;
+#else
+static const unsigned int resume_delay     =   80;
+#endif
 
 static int i2c_touchkey_read_byte(struct cypress_touchkey_devdata *devdata,
 					u8 *val)
@@ -104,7 +147,7 @@ static int i2c_touchkey_write(struct cypress_touchkey_devdata *devdata,
 			return 0;
 		printk(KERN_DEBUG "%s %d i2c transfer error\n", __func__,
 		       __LINE__);
-		mdelay(10);
+		msleep(10);
 	}
 	return err;
 }
@@ -135,22 +178,29 @@ static ssize_t touch_led_control(struct device *dev,
 {
 	int ret;
 
+	mutex_lock(&devdata_led->mutex);
+
 	if (strncmp(buf, "1", 1) == 0)
 	{
-		if (devdata_led->is_powering_on){
+		if (devdata_led->is_bl_disabled)
+			goto unlock;
+
+		devdata_led->is_backlight_on = true;
+		if (devdata_led->is_powering_on || devdata_led->is_key_pressed) {
 			dev_err(dev, "%s: delay led on \n", __func__);
 			devdata_led->is_delay_led_on = true;
-			return size;
+			goto unlock;
 		}
 		ret = i2c_touchkey_write(devdata_led, &devdata_led->backlight_on, 1);
 		printk("Touch Key led ON\n");
 	}
 	else
 	{
-		if (devdata_led->is_powering_on){
-			dev_err(dev, "%s: delay led off skip \n", __func__);
-			devdata_led->is_delay_led_on = false;
-			return size;
+		devdata_led->is_backlight_on = false;
+		if (devdata_led->is_powering_on || devdata_led->is_key_pressed) {
+			dev_err(dev, "%s: delay led off\n", __func__);
+			devdata_led->is_delay_led_on = true;
+			goto unlock;
 		}
 		ret = i2c_touchkey_write(devdata_led, &devdata_led->backlight_off, 1);
 		printk("Touch Key led OFF\n");			
@@ -159,6 +209,8 @@ static ssize_t touch_led_control(struct device *dev,
 	if (ret)
 		dev_err(dev, "%s: touchkey led i2c failed\n", __func__);
 
+unlock:
+	mutex_unlock(&devdata_led->mutex);
 	return size;
 }
 
@@ -168,9 +220,11 @@ static ssize_t touch_control_enable_disable(struct device *dev,
 {
 	printk("touchkey_enable =1 , disable=0 %c \n", *buf);
 
+	mutex_lock(&devdata_led->mutex);
+
 	if (strncmp(buf, "0", 1) == 0){
 		devdata_led->is_powering_on = true;
-		disable_irq(devdata_led->client->irq);
+		disable_irq_nosync(devdata_led->client->irq);
 #if defined CONFIG_MACH_VICTORY
 		gpio_direction_output(_3_GPIO_TOUCH_EN, TOUCHKEY_OFF);
 #else		
@@ -191,9 +245,11 @@ static ssize_t touch_control_enable_disable(struct device *dev,
 	else
 		printk("touchkey_enable_disable: unknown command %c \n", *buf);
 
+	mutex_unlock(&devdata_led->mutex);
 	return size;
 }
 
+/* Mutex must be locked when calling. */
 static void all_keys_up(struct cypress_touchkey_devdata *devdata)
 {
 	int i;
@@ -203,8 +259,10 @@ static void all_keys_up(struct cypress_touchkey_devdata *devdata)
 						devdata->pdata->keycode[i], 0);
 
 	input_sync(devdata->input_dev);
+	devdata->is_key_pressed = false;
 }
 
+/* Mutex must be locked when calling. */
 static int recovery_routine(struct cypress_touchkey_devdata *devdata)
 {
 	int ret = -1;
@@ -247,6 +305,28 @@ out:
 extern unsigned int touch_state_val;
 extern void TSP_forced_release(void);
 
+/* Turns off backlight following a key release.
+ *
+ * Note: there's technically a race here if a second key is pressed "just"
+ * as the first scheduled work fires but has yet to execute.  If so, then
+ * this function will turn off the backlight early, only to immediately be
+ * turned on again.  Oh well. */
+#ifdef BACKLIGHT_DELAYS
+static void key_off_func(struct work_struct *work)
+{
+	struct cypress_touchkey_devdata *devdata = container_of(work,
+	       struct cypress_touchkey_devdata, key_off_work.work);
+
+	mutex_lock(&devdata->mutex);
+
+	/* Check if "buttons" light was turned on while waiting. */
+	if (!devdata->is_powering_on && !devdata->is_backlight_on)
+		i2c_touchkey_write(devdata, &devdata->backlight_off, 1);
+
+	mutex_unlock(&devdata->mutex);
+}
+#endif
+
 static irqreturn_t touchkey_interrupt_thread(int irq, void *touchkey_devdata)
 {
 	u8 data;
@@ -254,6 +334,11 @@ static irqreturn_t touchkey_interrupt_thread(int irq, void *touchkey_devdata)
 	int ret;
 	int scancode;
 	struct cypress_touchkey_devdata *devdata = touchkey_devdata;
+
+	mutex_lock(&devdata->mutex);
+
+	if (devdata->is_powering_on)
+		goto unlock;
 
 	ret = i2c_touchkey_read_byte(devdata, &data);
 	if (ret || (data & ESD_STATE_MASK)) {
@@ -288,9 +373,32 @@ static irqreturn_t touchkey_interrupt_thread(int irq, void *touchkey_devdata)
 		input_report_key(devdata->input_dev,
 			devdata->pdata->keycode[scancode], 0);
 		input_sync(devdata->input_dev);
+		devdata->is_key_pressed = false;
 		dev_dbg(&devdata->client->dev, "[release] cypress touch key : %d \n",
 			devdata->pdata->keycode[scancode]);
 		printk("Touch_key=release\n");
+
+#ifndef BACKLIGHT_DELAYS
+		if (devdata->is_delay_led_on) {
+			/* A request to turn on/off the backlight came while a key was pressed and
+			 * was deferred.  Process it now, except on victory where the backlight
+			 * turns on automatically shortly after release, and turning it off now has
+			 * no effect. */
+			i2c_touchkey_write(devdata, devdata->is_backlight_on ?
+			                   &devdata->backlight_on : &devdata->backlight_off, 1);
+		}
+#endif
+		devdata->is_delay_led_on = false;
+
+#ifdef BACKLIGHT_DELAYS
+		if (!devdata->is_backlight_on) {
+			/* "buttons" light is (likely) disabled, must explicitly turn off backlight
+			 * since it turns on automatically during a key release. */
+			cancel_delayed_work(&devdata->key_off_work);
+			schedule_delayed_work(&devdata->key_off_work,
+			                      msecs_to_jiffies(key_off_delay));
+		}
+#endif
 	} else {
 		if (!touch_state_val) {	
 			if (devdata->has_legacy_keycode) {
@@ -304,6 +412,7 @@ static irqreturn_t touchkey_interrupt_thread(int irq, void *touchkey_devdata)
 					TSP_forced_release();
 				input_report_key(devdata->input_dev,
 					devdata->pdata->keycode[scancode], 1);
+				devdata->is_key_pressed = true;
 				
 				dev_dbg(&devdata->client->dev, "[press] cypress touch key : %d \n",
 					devdata->pdata->keycode[scancode]);	
@@ -322,6 +431,8 @@ static irqreturn_t touchkey_interrupt_thread(int irq, void *touchkey_devdata)
 	
 	}	
 err:
+unlock:
+	mutex_unlock(&devdata->mutex);
 	return IRQ_HANDLED;
 }
 
@@ -329,6 +440,7 @@ static irqreturn_t touchkey_interrupt_handler(int irq, void *touchkey_devdata)
 {
 	struct cypress_touchkey_devdata *devdata = touchkey_devdata;
 
+	/* Can't lock the mutex in interrupt context, but should be OK. */
 	if (devdata->is_powering_on) {
 		dev_dbg(&devdata->client->dev, "%s: ignoring spurious boot "
 					"interrupt\n", __func__);
@@ -344,17 +456,26 @@ static void cypress_touchkey_early_suspend(struct early_suspend *h)
 	struct cypress_touchkey_devdata *devdata =
 		container_of(h, struct cypress_touchkey_devdata, early_suspend);
 
+	mutex_lock(&devdata->mutex);
+
 	devdata->is_powering_on = true;
 
 	if (unlikely(devdata->is_dead))
-		return;
+		goto unlock;
 
-	disable_irq(devdata->client->irq);
+	disable_irq_nosync(devdata->client->irq);
 
 	if(devdata->pdata->touchkey_onoff)
 		devdata->pdata->touchkey_onoff(TOUCHKEY_OFF);
 
 	all_keys_up(devdata);
+
+#ifdef BACKLIGHT_DELAYS
+	cancel_delayed_work(&devdata->key_off_work);
+#endif
+
+unlock:
+	mutex_unlock(&devdata->mutex);
 }
 
 static void cypress_touchkey_early_resume(struct early_suspend *h)
@@ -362,7 +483,9 @@ static void cypress_touchkey_early_resume(struct early_suspend *h)
 	struct cypress_touchkey_devdata *devdata =
 		container_of(h, struct cypress_touchkey_devdata, early_suspend);
 	
+#ifndef CONFIG_MACH_VICTORY
 	msleep(1);
+#endif
 
 	if(devdata->pdata->touchkey_onoff)
 		devdata->pdata->touchkey_onoff(TOUCHKEY_ON);
@@ -377,22 +500,104 @@ static void cypress_touchkey_early_resume(struct early_suspend *h)
 		return;
 	}
 	#endif
+
+	mutex_lock(&devdata->mutex);
+
 	devdata->is_dead = false;
 	enable_irq(devdata->client->irq);
 	devdata->is_powering_on = false;
 
+	if (resume_delay > 0) {
+		mutex_unlock(&devdata->mutex);
+		msleep(resume_delay); // touch power on time
+		mutex_lock(&devdata->mutex);
+	}
+
 	if (devdata->is_delay_led_on){
 		int ret;
-		msleep(80); // touch power on time
-		ret = i2c_touchkey_write(devdata, &devdata->backlight_on, 1);
-		dev_err(&devdata->client->dev,"%s: Touch Key led ON ret = %d\n",__func__, ret);
+		if (devdata->is_backlight_on) {
+			ret = i2c_touchkey_write(devdata, &devdata->backlight_on, 1);
+			dev_err(&devdata->client->dev,"%s: Touch Key led ON ret = %d\n",__func__, ret);
+		} else {
+			ret = i2c_touchkey_write(devdata, &devdata->backlight_off, 1);
+			dev_err(&devdata->client->dev,"%s: Touch Key led OFF ret = %d\n",__func__, ret);
+		}
 	}
 	devdata->is_delay_led_on = false;
+
+	mutex_unlock(&devdata->mutex);
 }
 #endif
 
 static DEVICE_ATTR(brightness, 0660, NULL,touch_led_control);
 static DEVICE_ATTR(enable_disable, 0660, NULL,touch_control_enable_disable);
+
+#ifdef BACKLIGHT_DELAYS
+#define DELAY_ATTR(delay) \
+static ssize_t delay##_show(struct device *dev, \
+                            struct device_attribute *attr, char *buf) \
+{ \
+	return snprintf(buf, PAGE_SIZE, "%u\n", delay); \
+} \
+\
+static ssize_t delay##_store(struct device *dev, \
+                             struct device_attribute *attr, \
+                             const char *buf, size_t count) \
+{ \
+	unsigned long val; \
+	int res; \
+\
+	if ((res = strict_strtoul(buf, 10, &val)) < 0) \
+		return res; \
+\
+	if (val > delay##_max) \
+		return -EINVAL; \
+\
+	delay = val; \
+\
+	return count; \
+} \
+\
+static DEVICE_ATTR(delay, S_IRUGO | S_IWUSR, delay##_show, delay##_store);
+
+DELAY_ATTR(key_off_delay)
+DELAY_ATTR(resume_delay)
+#undef DELAY_ATTR
+#endif
+
+static ssize_t touchleds_disabled_show(struct device *dev,
+                                       struct device_attribute *attr,
+                                       char *buf)
+{
+	int res;
+
+	mutex_lock(&devdata_led->mutex);
+	res = snprintf(buf, PAGE_SIZE, "%u\n",
+	               (unsigned int)devdata_led->is_bl_disabled);
+	mutex_unlock(&devdata_led->mutex);
+
+	return res;
+}
+
+static ssize_t touchleds_disabled_store(struct device *dev,
+                                        struct device_attribute *attr,
+                                        const char *buf, size_t count)
+{
+	unsigned long val;
+	int res;
+
+	if ((res = strict_strtoul(buf, 10, &val)) < 0)
+		return res;
+
+	mutex_lock(&devdata_led->mutex);
+	devdata_led->is_bl_disabled = val;
+	mutex_unlock(&devdata_led->mutex);
+
+	return count;
+}
+
+static DEVICE_ATTR(touchleds_disabled, S_IRUGO | S_IWUSR,
+                   touchleds_disabled_show, touchleds_disabled_store);
 
 extern struct class *sec_class;
 struct device *ts_key_dev;
@@ -452,6 +657,13 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 
 	devdata->is_powering_on = true;
 	devdata->is_delay_led_on = false;
+	devdata->is_backlight_on = true;
+	devdata->is_key_pressed = false;
+	devdata->is_bl_disabled = false;
+	mutex_init(&devdata->mutex);
+#ifdef BACKLIGHT_DELAYS
+	INIT_DELAYED_WORK(&devdata->key_off_work, key_off_func);
+#endif
 
 	if(devdata->pdata->touchkey_onoff)
 		devdata->pdata->touchkey_onoff(TOUCHKEY_ON);	
@@ -493,6 +705,17 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 	    if (device_create_file(ts_key_dev, &dev_attr_enable_disable) < 0)
 		pr_err("Failed to create device file for Touch key_enable_disable!\n");
 
+#ifdef BACKLIGHT_DELAYS
+	if (device_create_file(ts_key_dev, &dev_attr_key_off_delay) < 0)
+		pr_err("Unable to create \"%s\".\n", dev_attr_key_off_delay.attr.name);
+
+	if (device_create_file(ts_key_dev, &dev_attr_resume_delay) < 0)
+		pr_err("Unable to create \"%s\".\n", dev_attr_resume_delay.attr.name);
+#endif
+
+	if (device_create_file(ts_key_dev, &dev_attr_touchleds_disabled) < 0)
+		pr_err("Unable to create \"%s\".\n", dev_attr_touchleds_disabled.attr.name);
+
 #if 0
 	err = i2c_touchkey_write_byte(devdata, devdata->backlight_on);
 	if (err) {
@@ -514,7 +737,9 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 #endif
 	register_early_suspend(&devdata->early_suspend);
 
+	mutex_lock(&devdata->mutex);
 	devdata->is_powering_on = false;
+	mutex_unlock(&devdata->mutex);
 
 	return 0;
 
@@ -524,6 +749,12 @@ err_read:
 	
 	if(devdata->pdata->touchkey_onoff)
 		devdata->pdata->touchkey_onoff(TOUCHKEY_OFF);
+#ifdef BACKLIGHT_DELAYS
+	device_remove_file(ts_key_dev, &dev_attr_key_off_delay);
+	device_remove_file(ts_key_dev, &dev_attr_resume_delay);
+#endif
+	device_remove_file(ts_key_dev, &dev_attr_touchleds_disabled);
+	mutex_destroy(&devdata->mutex);
 	input_unregister_device(input_dev);
 	goto err_input_alloc_dev;
 err_input_reg_dev:
@@ -545,7 +776,16 @@ static int __devexit i2c_touchkey_remove(struct i2c_client *client)
 	else if(devdata->pdata->touchkey_onoff)
 		devdata->pdata->touchkey_onoff(TOUCHKEY_OFF);
 	free_irq(client->irq, devdata);
+	mutex_lock(&devdata->mutex);
 	all_keys_up(devdata);
+	mutex_unlock(&devdata->mutex);
+#ifdef BACKLIGHT_DELAYS
+	device_remove_file(ts_key_dev, &dev_attr_key_off_delay);
+	device_remove_file(ts_key_dev, &dev_attr_resume_delay);
+	cancel_delayed_work_sync(&devdata->key_off_work);
+#endif
+	device_remove_file(ts_key_dev, &dev_attr_touchleds_disabled);
+	mutex_destroy(&devdata->mutex);
 	input_unregister_device(devdata->input_dev);
 	kfree(devdata);
 	return 0;
