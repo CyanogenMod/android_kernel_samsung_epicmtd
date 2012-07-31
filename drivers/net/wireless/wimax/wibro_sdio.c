@@ -1213,7 +1213,7 @@ static int Adapter_probe(struct sdio_func *func,
 
 	set_wimax_pm(wimax_suspend, wimax_resume);   
 
-	max8893_ldo_enable_direct(4);
+	max8893_ldo_enable_direct(5);
 
 	LEAVE;
 	powerup_done = true;
@@ -1299,7 +1299,7 @@ static void Adapter_remove(struct sdio_func *func)
 
 	unset_wimax_pm();    
 
-        max8893_ldo_disable_direct(4);       //cky 20100611
+        max8893_ldo_disable_direct(5);       //cky 20100611
 
 	LEAVE;
 	return;
