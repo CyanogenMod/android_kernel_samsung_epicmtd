@@ -2381,7 +2381,7 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
         if (wimax_suspend && host->mmc->index == 0)             //  WiMAX: mmc0
         {
 
-                max8893_ldo_disable_direct(4);
+                max8893_ldo_disable_direct(5);
         }
 #endif
 	return ret;
@@ -2411,7 +2411,7 @@ int sdhci_resume_host(struct sdhci_host *host)
  #ifdef CONFIG_MACH_VICTORY
         if (wimax_suspend && host->mmc->index == 0)             //  WiMAX: mmc0
         {
-                max8893_ldo_enable_direct(4);
+                max8893_ldo_enable_direct(5);
         }
 #endif
 	sdhci_init(host, (host->mmc->pm_flags & MMC_PM_KEEP_POWER));

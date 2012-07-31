@@ -989,12 +989,12 @@ static struct regulator_init_data max8893_buck_data = {
 };
 
 static struct max8893_subdev_data universal_8893_regulators[] = {
+	{ MAX8893_BUCK, &max8893_buck_data },
 	{ MAX8893_LDO1, &max8893_ldo1_data },
 	{ MAX8893_LDO2, &max8893_ldo2_data },
 	{ MAX8893_LDO3, &max8893_ldo3_data },
 	{ MAX8893_LDO4, &max8893_ldo4_data },
 	{ MAX8893_LDO5, &max8893_ldo5_data },
-	{ MAX8893_BUCK, &max8893_buck_data },
 };
 
 static struct max8893_platform_data max8893_platform_data = {
