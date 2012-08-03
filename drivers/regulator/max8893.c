@@ -141,6 +141,37 @@ static int max8893_write_reg(struct max8893 *max8893, u8 value, u8 reg)
 	return 0;
 }
 
+static const int ldo13_8893_voltage_map[] = {
+	1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500,
+	2600, 2700, 2800, 2900, 3000, 3100, 3200, 3300,
+};
+
+static const int ldo2_8893_voltage_map[] = {
+	1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100,
+	2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000, 3100,
+	3200, 3300,
+};
+
+static const int ldo45_8893_voltage_map[] = {
+	 800,  900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700,
+	1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700,
+	2800, 2900, 3000, 3100, 3200, 3300,
+};
+
+static const int buck_8893_voltage_map[] = {
+	 800,  900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700,
+	1800, 1900, 2000, 2100, 2200, 2300, 2400,
+};
+
+static const int *ldo_8893_voltage_map[] = {
+	buck_8893_voltage_map,	/* BUCK */
+	ldo13_8893_voltage_map,	/* LDO1 */
+	ldo2_8893_voltage_map,	/* LDO2 */
+	ldo13_8893_voltage_map,	/* LDO3 */
+	ldo45_8893_voltage_map,	/* LDO4 */
+	ldo45_8893_voltage_map,	/* LDO5 */
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////
 //DIRECT APIS
 
@@ -210,6 +241,66 @@ int max8893_ldo_disable_direct(int ldo)
 
 EXPORT_SYMBOL_GPL(max8893_ldo_disable_direct);
 
+int max8893_ldo_set_voltage_direct(int ldo,
+				int min_uV, int max_uV)
+{
+	struct max8893 *max8893 = client_8893data_p;
+	int value, shift = 0, mask = 0xff, reg;
+	int min_vol = min_uV / 1000, max_vol = max_uV / 1000;
+	const int *vol_map = ldo_8893_voltage_map[ldo];
+	int i = 0;
+
+	if((ldo < MAX8893_BUCK) || (ldo > MAX8893_END))
+	{
+		printk("ERROR: Invalid argument passed\n");
+		return -EINVAL;
+	}
+
+	DBG("func =%s called for regulator = %d, min_v=%d, max_v=%d\n",__func__,ldo,min_uV,max_uV);
+
+	if (min_vol < 800 ||
+	    max_vol > 3300)
+		return -EINVAL;
+
+	while (vol_map[i]) {
+		if (vol_map[i] >= min_vol)
+			break;
+		i++;
+	}
+
+	value = i;
+
+	DBG("Found voltage=%d, i = %x\n",vol_map[i], i);
+
+	if (!vol_map[i])
+		return -EINVAL;
+
+	if (vol_map[i] > max_vol)
+		return -EINVAL;
+
+	if (ldo == MAX8893_LDO1) {
+		reg  = MAX8893_REG_LDO1;
+	} else if (ldo == MAX8893_LDO2) {
+		reg  = MAX8893_REG_LDO2;
+	} else if (ldo == MAX8893_LDO3) {
+		reg  = MAX8893_REG_LDO3;
+	} else if (ldo == MAX8893_LDO4) {
+		reg  = MAX8893_REG_LDO4;
+	} else if (ldo == MAX8893_LDO5) {
+		reg  = MAX8893_REG_LDO5;
+	} else if (ldo == MAX8893_BUCK) {
+		reg  = MAX8893_REG_BUCK;
+	}
+
+//	value = max8893_read_reg(max8893, reg);
+//	value &= ~mask;
+//	value |= (i << shift);
+	max8893_write_reg(max8893, value, reg);
+
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(max8893_ldo_set_voltage_direct);
 
 static int max8893_onoff(struct regulator_dev *rdev, bool enable)
 {
