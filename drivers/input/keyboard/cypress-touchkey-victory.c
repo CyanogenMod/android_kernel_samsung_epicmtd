@@ -39,8 +39,8 @@
 #define UPDOWN_EVENT_MASK	0x08
 #define ESD_STATE_MASK		0x10
 
-#define BACKLIGHT_ON		0x10
-#define BACKLIGHT_OFF		0x20
+#define BACKLIGHT_ON		0x1
+#define BACKLIGHT_OFF		0x2
 
 #define OLD_BACKLIGHT_ON	0x1
 #define OLD_BACKLIGHT_OFF	0x2
