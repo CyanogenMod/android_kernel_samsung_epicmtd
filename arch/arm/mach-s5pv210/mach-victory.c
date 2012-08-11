@@ -3376,10 +3376,24 @@ static void __init qt_touch_init(void)
 	i2c_devs2[1].irq = irq;
 }
 
+// Ugly hack to inject parameters (e.g. device serial) into /proc/cmdline
+static void __init victory_inject_cmdline(void) {
+	char *new_command_line;
+	int size;
+
+	size = strlen(boot_command_line);
+	new_command_line = kmalloc(size + 40 + 11, GFP_KERNEL);
+	strcpy(new_command_line, saved_command_line);
+	size += sprintf(new_command_line + size, " androidboot.serialno=%08X%08X",
+				system_serial_high, system_serial_low);
+
+	saved_command_line = new_command_line;
+}
+
 static void __init victory_machine_init(void)
 {
 	setup_ram_console_mem();
-	//s3c_usb_set_serial();
+	victory_inject_cmdline();
 	platform_add_devices(victory_devices, ARRAY_SIZE(victory_devices));
 	printk(KERN_EMERG "VICTORY 3.0 The **************SYSTEM_REV********** is 0x%x\n",system_rev);
 	/* Find out S5PC110 chip version */
@@ -3491,10 +3505,6 @@ static void __init victory_machine_init(void)
 	victory_init_wifi_mem();
 
 	onenand_init();
-#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
-	/* soonyong.cho : This is for setting unique serial number */
-	s3c_usb_set_serial();
-#endif
 
 	if (gpio_is_valid(GPIO_MSENSE_nRST)) {
 		if (gpio_request(GPIO_MSENSE_nRST, "GPD0"))
