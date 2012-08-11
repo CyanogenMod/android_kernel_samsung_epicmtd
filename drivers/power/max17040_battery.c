@@ -54,6 +54,8 @@ struct max17040_chip {
 	int status;
 };
 
+struct i2c_client *fg_i2c_client;
+
 static void max17040_update_values(struct max17040_chip *chip);
 
 static int max17040_get_property(struct power_supply *psy,
@@ -208,6 +210,17 @@ static void max17040_get_status(struct i2c_client *client)
 		chip->status = POWER_SUPPLY_STATUS_FULL;
 }
 
+static int max17040_reset_chip(struct i2c_client *client)
+{
+	int ret;
+	u16 rst_cmd = 0x4000;
+
+	ret = i2c_smbus_write_word_data(client, MAX17040_MODE_MSB, swab16(rst_cmd));
+	msleep(500);
+
+	return ret;
+}
+
 static void max17040_update_values(struct max17040_chip *chip)
 {
 	max17040_get_vcell(chip->client);
@@ -220,6 +233,13 @@ static void max17040_update_values(struct max17040_chip *chip)
 	monotonic_to_bootbased(&chip->next_update_time);
 	chip->next_update_time.tv_sec++;
 }
+
+void max17040_reset_soc(void)
+{
+	struct i2c_client *client = fg_i2c_client;
+	max17040_reset_chip(client);
+}
+EXPORT_SYMBOL(max17040_reset_soc);
 
 static enum power_supply_property max17040_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -242,7 +262,7 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	if (!chip)
 		return -ENOMEM;
 
-	chip->client = client;
+	chip->client = fg_i2c_client = client;
 	chip->pdata = client->dev.platform_data;
 
 	i2c_set_clientdata(client, chip);
