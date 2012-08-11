@@ -114,6 +114,16 @@ struct s5p_batt_block_temp
 	int temp_low_recover_lpm;
 	int temp_high_event_block;
 };
+/*
+ * ADC Channel
+ */
+struct adc_channel_type2 {
+        int s3c_adc_voltage;
+        int s3c_adc_chg_current;
+        int s3c_adc_temperature;
+        int s3c_adc_v_f;
+        int s3c_adc_hw_version;
+};
 
 /**
  * struct max8998_board - packages regulator init data
@@ -159,7 +169,8 @@ struct max8998_platform_data {
 	bool				wakeup;
 	bool				rtc_delay;
 	struct max8998_charger_data	*charger;
-    struct s5p_batt_block_temp      *s5pc110_batt_block_temp;
+	struct adc_channel_type2	*s3c_adc_channel;
+	struct s5p_batt_block_temp      *s5pc110_batt_block_temp;
 };
 
 #endif /*  __LINUX_MFD_MAX8998_H */
