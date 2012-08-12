@@ -177,21 +177,28 @@ static int suspend_enter(suspend_state_t state)
 	}
 
 	arch_suspend_enable_irqs();
+printk(KERN_INFO "XXX: After arch_spend_enable_irqs");
 	BUG_ON(irqs_disabled());
+printk(KERN_INFO "XXX: After BUG_ON");
 
  Enable_cpus:
 	enable_nonboot_cpus();
+printk(KERN_INFO "XXX: After enable_nonboot_cpus");
 
  Platform_wake:
 	if (suspend_ops->wake)
 		suspend_ops->wake();
+printk(KERN_INFO "XXX: After suspend_ops->wake");
 
 	dpm_resume_noirq(PMSG_RESUME);
+printk(KERN_INFO "XXX: After dpm_resume_noirq");
+
 
  Platform_finish:
 	if (suspend_ops->finish)
 		suspend_ops->finish();
 
+printk(KERN_INFO "XXX: End of suspend_enter");
 	return error;
 }
 
@@ -229,14 +236,19 @@ int suspend_devices_and_enter(suspend_state_t state)
 
  Resume_devices:
 	suspend_test_start();
+printk(KERN_INFO "XXX: After suspend_test_start");
 	dpm_resume_end(PMSG_RESUME);
+printk(KERN_INFO "XXX: After dpm_resume_end");
 	suspend_test_finish("resume devices");
+printk(KERN_INFO "XXX: After suspend_test_finish");
 	ftrace_start();
 	resume_console();
  Close:
+printk(KERN_INFO "XXX: Enter 'Close:'");
 	if (suspend_ops->end)
 		suspend_ops->end();
 	trace_machine_suspend(PWR_EVENT_EXIT);
+printk(KERN_INFO "XXX: After trace_machine_suspend");
 	return error;
 
  Recover_platform:
