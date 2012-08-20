@@ -4062,8 +4062,8 @@ static void onenand_resume(struct mtd_info *mtd)
 	if (this->state == FL_PM_SUSPENDED)
 		onenand_release_device(mtd);
 	else
-		printk(KERN_ERR "resume() called for the chip which is not"
-				"in suspended state\n");
+		printk(KERN_ERR "%s: resume() called for the chip which is not "
+				"in suspended state\n", __func__);
 }
 
 /**
