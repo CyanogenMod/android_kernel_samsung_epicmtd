@@ -153,6 +153,7 @@ enum af_operation_status {
 	AF_NONE = 0,
 	AF_START,
 	AF_CANCEL,
+	AF_INITIAL,
 };
 
 enum ce147_frame_size {
@@ -3540,7 +3541,7 @@ static int ce147_set_touch_auto_focus(struct v4l2_subdev *sd,
 	unsigned char ce147_buf_set_touch_af[11] = { 0x00, };
 	unsigned int ce147_len_set_touch_af = 11;
 
-#if defined(CONFIG_ARIES_NTT)||defined(CONFIG_MACH_ATLAS)||defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE)/* Modify	NTTS1 */
+#if defined(CONFIG_ARIES_NTT) || defined(CONFIG_MACH_ATLAS) || defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE)/* Modify	NTTS1 */
 	state->disable_aeawb_lock = 1;
 	err = ce147_set_awb_lock(sd, 0);
 	if (err < 0) {
@@ -3614,7 +3615,7 @@ static int ce147_set_focus_mode(struct v4l2_subdev *sd,
 		|| (ctrl->value == FOCUS_MODE_MACRO_DEFAULT)
 		|| (ctrl->value == FOCUS_MODE_AUTO_DEFAULT)) {
 		/* || (ctrl->value == FOCUS_MODE_FD_DEFAULT)) */
-#if defined(CONFIG_ARIES_NTT)||defined(CONFIG_MACH_ATLAS)||defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE)/* Modify	NTTS1 */
+#if defined(CONFIG_ARIES_NTT) || defined(CONFIG_MACH_ATLAS) || defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE)/* Modify	NTTS1 */
 		ce147_msg(&client->dev, "%s: unlock\n", __func__);
 		state->disable_aeawb_lock = 0;
 		err = ce147_set_awb_lock(sd, 0);
@@ -4119,6 +4120,23 @@ static int ce147_set_face_lock(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int ce147_finish_auto_focus(struct v4l2_subdev *sd)
+{
+	int err;
+	struct ce147_state *state = to_state(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	if (!state->disable_aeawb_lock) {
+		err = ce147_set_awb_lock(sd, 1);
+		if (err < 0) {
+			dev_err(&client->dev, "%s: failed: ce147_set_awb_lock, err %d\n",__func__, err);
+					return -EIO;
+		}
+	}
+
+	state->af_status = AF_NONE;
+	return 0;
+}
+
 static int ce147_start_auto_focus(struct v4l2_subdev *sd,
 					struct v4l2_control *ctrl)
 {
@@ -4130,10 +4148,18 @@ static int ce147_start_auto_focus(struct v4l2_subdev *sd,
 
 	ce147_msg(&client->dev, "%s\n", __func__);
 
+	ce147_msg(&client->dev, "%s: unlock\n", __func__);
+	err = ce147_set_awb_lock(sd, 0);
+	if (err < 0) {
+		dev_err(&client->dev, "%s: failed: ce147_set_awb_"
+				"unlock, err %d\n", __func__, err);
+		return -EIO;
+	}
+
 	/* start af */
 	err = ce147_i2c_write_multi(client, CMD_START_AUTO_FOCUS_SEARCH,
 			ce147_buf_set_af, ce147_len_set_af);
-	state->af_status = AF_START;
+	state->af_status = AF_INITIAL;
 	INIT_COMPLETION(state->af_complete);
 
 	if (err < 0) {
@@ -4188,71 +4214,41 @@ static int ce147_get_auto_focus_status(struct v4l2_subdev *sd,
 
 	ce147_msg(&client->dev, "%s\n", __func__);
 
-	if (state->af_status == AF_NONE) {
-		dev_err(&client->dev,
+	if (state->af_status == AF_INITIAL) {
+		dev_dbg(&client->dev, "%s: Check AF Result\n", __func__);
+		if (state->af_status == AF_NONE) {
+			dev_err(&client->dev,
 				"%s: auto focus never started, returning 0x2\n",
 				__func__);
-		pr_debug("%s: AUTO_FOCUS_CANCELLED\n", __func__);
+			pr_debug("%s: AUTO_FOCUS_CANCELLED\n", __func__);
+			ctrl->value = AUTO_FOCUS_CANCELLED;
+			return 0;
+		}
+	} else if (state->af_status == AF_CANCEL) {
+		dev_dbg(&client->dev,
+			"%s: AF is cancelled while doing\n", __func__);
 		ctrl->value = AUTO_FOCUS_CANCELLED;
+		ce147_finish_auto_focus(sd);
 		return 0;
 	}
 
-	/* status check	whether AF searching is	successful or not */
-	for (count = 0;	count < 600; count++) {
-		mutex_unlock(&state->ctrl_lock);
-		msleep(10);
-		mutex_lock(&state->ctrl_lock);
-
-		if (state->af_status == AF_CANCEL) {
-			dev_err(&client->dev,
-				"%s: AF is cancelled while doing\n", __func__);
-			ctrl->value = AUTO_FOCUS_CANCELLED;
-			goto out;
-		}
-
-		ce147_buf_get_af_status[0] = 0xFF;
-		err = ce147_i2c_read_multi(client,
-				CMD_CHECK_AUTO_FOCUS_SEARCH, NULL, 0,
-				ce147_buf_get_af_status, 1);
-		if (err < 0) {
-			dev_err(&client->dev, "%s: failed: i2c_read "
-					"for auto_focus\n", __func__);
-			return -EIO;
-		}
-		if (ce147_buf_get_af_status[0] == 0x05)
-			continue;
-		if (ce147_buf_get_af_status[0] == 0x00
-				|| ce147_buf_get_af_status[0] == 0x02
-				|| ce147_buf_get_af_status[0] == 0x04)
-			break;
+	ce147_buf_get_af_status[0] = 0xFF;
+	err = ce147_i2c_read_multi(client,
+			CMD_CHECK_AUTO_FOCUS_SEARCH, NULL, 0,
+			ce147_buf_get_af_status, 1);
+	if (err < 0) {
+		dev_err(&client->dev, "%s: failed: i2c_read "
+				"for auto_focus\n", __func__);
+		return -EIO;
 	}
 
-	ctrl->value = FOCUS_MODE_AUTO_DEFAULT;
-
-	if (ce147_buf_get_af_status[0] == 0x02) {
-		ctrl->value = AUTO_FOCUS_DONE;
-	} else {
-		ce147_set_focus_mode(sd, ctrl);
-		ctrl->value = AUTO_FOCUS_FAILED;
-		goto out;
+	if (ce147_buf_get_af_status[0] != 0x02 && ce147_buf_get_af_status[0] != 0x05) {
+	        ce147_set_focus_mode(sd, ctrl);
 	}
 	ce147_msg(&client->dev, "%s: done\n", __func__);
 
-#if defined(CONFIG_ARIES_NTT)||defined(CONFIG_MACH_ATLAS)||defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE) /* Modify	NTTS1 */
-	if ((ctrl->value == AUTO_FOCUS_DONE) && !state->disable_aeawb_lock) {
-		err = ce147_set_awb_lock(sd, 1);
-		if (err < 0) {
-			dev_err(&client->dev, "%s: failed: ce147_set_awb_lock, err %d\n",__func__, err);
-					return -EIO;
-		}
-	}
-#endif
-
-out:
-	state->af_status = AF_NONE;
-	complete(&state->af_complete);
-
-	/* pr_debug("ce147_get_auto_focus_status is called"); */
+	ctrl->value = ce147_buf_get_af_status[0];
+	ce147_msg(&client->dev, "%s: done\n", __func__);
 	return 0;
 }
 
@@ -4494,7 +4490,7 @@ static int ce147_s_crystal_freq(struct v4l2_subdev *sd, u32 freq, u32 flags)
 	return err;
 }
 
-static int ce147_g_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+static int ce147_g_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
 {
 	int err = 0;
 
@@ -4609,9 +4605,13 @@ static int ce147_enum_frameintervals(struct v4l2_subdev *sd,
 static int ce147_enum_mbus_fmt(struct v4l2_subdev *sd, unsigned int index,
 				  enum v4l2_mbus_pixelcode *code)
 {
+	int num_entries;
+
 	pr_debug("%s: index = %d\n", __func__, index);
 
-	if (index >= ARRAY_SIZE(capture_fmts))
+	num_entries = sizeof(capture_fmts) / sizeof(struct v4l2_mbus_framefmt);
+
+	if (index >= num_entries)
 		return -EINVAL;
 
 	*code = capture_fmts[index].code;
@@ -4624,7 +4624,7 @@ static int ce147_try_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt 
 	int num_entries;
 	int i;
 
-	num_entries = ARRAY_SIZE(capture_fmts);
+	num_entries = sizeof(capture_fmts) / sizeof(struct v4l2_mbus_framefmt);
 
 	pr_debug("%s: code = 0x%x, colorspace = 0x%x, num_entries = %d\n",
 	  __func__, fmt->code, fmt->colorspace, num_entries);
@@ -4898,7 +4898,7 @@ static int ce147_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ctrl->value = state->sa_status;
 		break;
 
-	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
+	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT_FIRST:
 		err = ce147_get_auto_focus_status(sd, ctrl);
 		break;
 
@@ -5037,6 +5037,7 @@ static int ce147_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ce147_state *state = to_state(sd);
 	int err = -ENOIOCTLCMD;
+	int offset = 134217728;
 	int value = ctrl->value;
 
 	mutex_lock(&state->ctrl_lock);
@@ -5236,12 +5237,10 @@ static int ce147_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		err = 0;
 		break;
 
-#if defined(CONFIG_ARIES_NTT)||defined(CONFIG_MACH_ATLAS)||defined(CONFIG_MACH_VICTORY) || defined(CONFIG_MACH_FORTE) /* Modify	NTTS1 */
-	case V4L2_CID_CAMERA_AE_AWB_DISABLE_LOCK:
+	case V4L2_CID_CAMERA_FINISH_AUTO_FOCUS:
 		state->disable_aeawb_lock = ctrl->value;
-		err = 0;
+		err = ce147_finish_auto_focus(sd);
 		break;
-#endif
 
 	case V4L2_CID_CAM_FW_VER:
 		err = ce147_get_fw_data(sd);
@@ -5294,7 +5293,7 @@ static int ce147_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	if (err < 0)
 		dev_err(&client->dev, "%s: vidioc_s_ctrl failed	%d, "
 				"s_ctrl: id(%d), value(%d)\n",
-					__func__, err, (ctrl->id - V4L2_CID_PRIVATE_BASE),
+					__func__, err, (ctrl->id - offset),
 					ctrl->value);
 
 	mutex_unlock(&state->ctrl_lock);
