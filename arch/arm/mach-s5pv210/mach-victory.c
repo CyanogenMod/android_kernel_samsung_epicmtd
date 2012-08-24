@@ -203,9 +203,6 @@ static int victory_notifier_call(struct notifier_block *this,
 			kernel_sec_set_upload_cause(BLK_UART_MSG_FOR_FACTRST_2ND_ACK);
 #endif
 	    }
-
-	    /* Show logo.jpg on reboot instead of _charging.jpg when USB is connected. */
-	    writel(0x12345678, S5P_INFORM5);
 	}
 	if(code != SYS_POWER_OFF ){
 		if(sec_set_param_value){
@@ -2791,6 +2788,9 @@ static struct platform_device sec_device_jack = {
 #define S5PV210_PS_HOLD_CONTROL_REG (S3C_VA_SYS+0xE81C)
 static void victory_power_off(void)
 {
+        /* Clear S5P_INFORM5 flag so we can enter lpm. */
+	writel(0x0, S5P_INFORM5);
+
 	int phone_wait_cnt = 0;
 
 	/* confirm phone is powered-off */

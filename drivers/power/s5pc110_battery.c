@@ -254,6 +254,9 @@ static void check_lpm_charging_mode(struct chg_data *chg)
 	} else
 		lpm_charging_mode = 0;
 
+        /* Show logo.jpg on reboot instead of _charging.jpg when USB is connected. */
+	writel(0x12345678, S5P_INFORM5);
+
 	bat_info("%s : lpm_charging_mode(%d)\n", __func__, lpm_charging_mode);
 }
 
