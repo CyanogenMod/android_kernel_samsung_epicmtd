@@ -92,6 +92,7 @@
 #define	CMD_INFO_LONGITUDE_LATITUDE	0xA3
 #define	CMD_INFO_ALTITUDE		0xA4
 #define	CMD_SET_FLASH			0xB2
+#define	CMD_SET_FLASH_POWER             0xB3
 #define	CMD_SET_DZOOM			0xB9
 #define	CMD_GET_DZOOM_LEVEL		0xBA
 #define	CMD_SET_EFFECT_SHOT		0xC0
@@ -2711,7 +2712,8 @@ static int ce147_set_flash(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	unsigned char ce147_buf_set_flash_manual[2] = { 0x00, 0x00 };
 	unsigned int ce147_len_set_flash_manual = 2;
 
-	if(ctrl->value != FLASH_MODE_TORCH_ON && ctrl->value != FLASH_MODE_TORCH_OFF)
+	if(ctrl->value != FLASH_MODE_TORCH
+	    || (ctrl->value != FLASH_MODE_TORCH_ON && ctrl->value != FLASH_MODE_TORCH_OFF))
 		Flash_Mode = ctrl->value; //SecFeature.Camera aswoogi
 
 	switch (ctrl->value) {
@@ -2726,6 +2728,10 @@ static int ce147_set_flash(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
         	case FLASH_MODE_ON:
         		ce147_buf_set_flash[1] = 0x01;
         		break;
+
+		case FLASH_MODE_TORCH:
+			ce147_buf_set_flash_manual[1] = 0x01;
+			break;
 
         	case FLASH_MODE_TORCH_ON://SecFeature.SPRINT by aswoogi
         		ce147_buf_set_flash_manual[1] = 0x01;
@@ -2745,7 +2751,8 @@ static int ce147_set_flash(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 
 	//need to modify flash off for torch mode
-	if(ctrl->value == FLASH_MODE_TORCH_ON ||ctrl->value == FLASH_MODE_TORCH_OFF) { //SecFeature.SPRINT by aswoogi
+	if(ctrl->value == FLASH_MODE_TORCH || ctrl->value == FLASH_MODE_TORCH_ON
+	    || ctrl->value == FLASH_MODE_OFF || ctrl->value == FLASH_MODE_TORCH_OFF) { //SecFeature.SPRINT by aswoogi
 		err = ce147_i2c_write_multi(client, CMD_SET_FLASH_MANUAL, ce147_buf_set_flash_manual, ce147_len_set_flash_manual);
 		if (err < 0) {
 			dev_err(&client->dev, "%s: failed: i2c_write for set_flash\n", __func__);
