@@ -637,7 +637,7 @@ static int s3c_cable_status_update(struct chg_data *chg)
 	}
 
 update:
-	if ((chg->cable_status == CABLE_TYPE_USB) && vdc_status)
+	if (vdc_status)
 		wake_lock(&chg->vbus_wake_lock);
 	else
 		wake_lock_timeout(&chg->vbus_wake_lock, HZ / 2);
