@@ -4,6 +4,8 @@
 
 # Each configuration option enables a list of files.
 
+ccflags-y := -Idrivers/video
+
 obj-$(CONFIG_VGASTATE)            += vgastate.o
 obj-y                             += fb_notify.o
 obj-$(CONFIG_FB)                  += fb.o
