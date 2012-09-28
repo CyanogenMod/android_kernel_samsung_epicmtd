@@ -278,6 +278,20 @@ static void uart_switch_init(void)
 	gpio_export(GPIO_UART_SEL, 1);
 
 	gpio_export_link(uartswitch_dev, "UART_SEL", GPIO_UART_SEL);
+
+	ret = gpio_request(GPIO_UART_SEL1, "UART_SEL1");
+	if (ret < 0) {
+		pr_err("Failed to request GPIO_UART_SEL1!\n");
+		gpio_free(GPIO_UART_SEL);
+		return;
+	}
+
+	s3c_gpio_cfgpin(GPIO_UART_SEL1, S3C_GPIO_OUTPUT);
+	s3c_gpio_setpull(GPIO_UART_SEL1, S3C_GPIO_PULL_NONE);
+	gpio_direction_output(GPIO_UART_SEL1, 0);
+
+	gpio_export(GPIO_UART_SEL1, 1);
+	gpio_export_link(uartswitch_dev, "UART_SEL1", GPIO_UART_SEL1);
 }
 
 static void victory_switch_init(void)
@@ -3502,6 +3516,8 @@ static void __init victory_machine_init(void)
 	victory_switch_init();
 
 	gps_gpio_init();
+
+	uart_switch_init();
 
 	victory_init_wifi_mem();
 
