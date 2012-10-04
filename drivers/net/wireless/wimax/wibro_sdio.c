@@ -1325,12 +1325,31 @@ static const struct sdio_device_id Adapter_table[] = {
 	{ }	/* Terminating entry */
 };
 
+static int adapter_suspend(struct device *dev)
+{
+	pr_info("adapter_suspend sdio");
+	return 0;
+}
+
+static int adapter_resume(struct device *dev)
+{
+	pr_info("adapter_resume sdio");
+	return 0;
+}
+static const struct dev_pm_ops adapter_pm_ops = {
+	.suspend	=	adapter_suspend,
+	.resume		=	adapter_resume,
+};
+
 static struct sdio_driver Adapter_driver = {
 	.name		= "C730SDIO",
 	.probe		= Adapter_probe,
 	.remove		= Adapter_remove,
 	.id_table		= Adapter_table,
 //	.resume		= Adapter_resume,
+	.drv = {
+		.pm = &adapter_pm_ops,
+	},
 };
 
 BOOLEAN hwGPIODeInit(void);
