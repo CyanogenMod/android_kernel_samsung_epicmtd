@@ -2339,6 +2339,10 @@ static void fsa9480_deskdock_cb(bool attached)
 		switch_set_state(&switch_dock, 1);
 	else
 		switch_set_state(&switch_dock, 0);
+
+        set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
+        if (callbacks && callbacks->set_cable)
+                callbacks->set_cable(callbacks, set_cable_status);
 }
 
 static void fsa9480_cardock_cb(bool attached)
@@ -2347,6 +2351,10 @@ static void fsa9480_cardock_cb(bool attached)
 		switch_set_state(&switch_dock, 2);
 	else
 		switch_set_state(&switch_dock, 0);
+
+        set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
+        if (callbacks && callbacks->set_cable)
+                callbacks->set_cable(callbacks, set_cable_status);
 }
 
 static void fsa9480_reset_cb(void)
