@@ -441,7 +441,11 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 				pdata->deskdock_cb(FSA9480_ATTACHED);
 				dock_status = 1;
 			ret = i2c_smbus_write_byte_data(client,
+#ifdef CONFIG_MACH_VICTORY
+					FSA9480_REG_MANSW1, SW_VAUDIO);
+#else
 					FSA9480_REG_MANSW1, SW_DHOST);
+#endif
 			if (ret < 0)
 				dev_err(&client->dev,
 					"%s: err %d\n", __func__, ret);
@@ -462,6 +466,25 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 			if (pdata->cardock_cb)
 				pdata->cardock_cb(FSA9480_ATTACHED);
 			dock_status = 1;
+#ifdef CONFIG_MACH_VICTORY
+                        ret = i2c_smbus_write_byte_data(client,
+                                        FSA9480_REG_MANSW1, SW_VAUDIO);
+                        if (ret < 0)
+                                dev_err(&client->dev,
+                                        "%s: err %d\n", __func__, ret);
+
+                        ret = i2c_smbus_read_byte_data(client,
+                                        FSA9480_REG_CTRL);
+                        if (ret < 0)
+                                dev_err(&client->dev,
+                                        "%s: err %d\n", __func__, ret);
+
+                        ret = i2c_smbus_write_byte_data(client,
+                                FSA9480_REG_CTRL, ret & ~CON_MANUAL_SW);
+                        if (ret < 0)
+                                dev_err(&client->dev,
+                                        "%s: err %d\n", __func__, ret);
+#endif
 		}
 	/* Detached */
 	} else {
@@ -525,6 +548,19 @@ static void fsa9480_detect_dev(struct fsa9480_usbsw *usbsw)
 			if (pdata->cardock_cb)
 				pdata->cardock_cb(FSA9480_DETACHED);
 			dock_status = 0;
+#ifdef CONFIG_MACH_VICTORY
+                        ret = i2c_smbus_read_byte_data(client,
+                                        FSA9480_REG_CTRL);
+                        if (ret < 0)
+                                dev_err(&client->dev,
+                                        "%s: err %d\n", __func__, ret);
+
+                        ret = i2c_smbus_write_byte_data(client,
+                                        FSA9480_REG_CTRL, ret | CON_MANUAL_SW);
+                        if (ret < 0)
+                                dev_err(&client->dev,
+                                        "%s: err %d\n", __func__, ret);
+#endif
 		}
 	}
 

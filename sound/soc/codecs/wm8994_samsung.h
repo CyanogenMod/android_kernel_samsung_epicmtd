@@ -105,7 +105,7 @@ Codec Output Path BIT
  */
 enum audio_path	{
 	OFF, RCV, SPK, HP, HP_NO_MIC, BT, SPK_HP,
-	RING_SPK, RING_HP, RING_NO_MIC, RING_SPK_HP
+	RING_SPK, RING_HP, RING_NO_MIC, RING_SPK_HP, EXTRA_DOCK_SPEAKER
 };
 enum call_path		{
 	CALL_OFF, CALL_RCV, CALL_SPK, CALL_HP,
@@ -193,6 +193,7 @@ void wm8994_set_playback_headset(struct snd_soc_codec *codec);
 void wm8994_set_playback_speaker(struct snd_soc_codec *codec);
 void wm8994_set_playback_bluetooth(struct snd_soc_codec *codec);
 void wm8994_set_playback_speaker_headset(struct snd_soc_codec *codec);
+void wm8994_set_playback_extra_dock_speaker(struct snd_soc_codec *codec);
 void wm8994_set_voicecall_common_setting(struct snd_soc_codec *codec);
 void wm8994_set_voicecall_receiver(struct snd_soc_codec *codec);
 void wm8994_set_voicecall_headset(struct snd_soc_codec *codec);

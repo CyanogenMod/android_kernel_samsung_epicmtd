@@ -2073,6 +2073,37 @@ void wm8994_set_playback_headset(struct snd_soc_codec *codec)
 	val |= WM8994_AIF1DAC1_UNMUTE;
 	wm8994_write(codec, WM8994_AIF1_DAC1_FILTERS_1, val);
 
+
+}
+
+void wm8994_set_playback_extra_dock_speaker(struct snd_soc_codec *codec)
+{
+    /* Volume Setting */
+    wm8994_write(codec, 0x0031, 0x0000);    // Output Mixer 5
+    wm8994_write(codec, 0x0032, 0x0000);    // Output Mixer 6
+    wm8994_write(codec, 0x0020, 0x0177);    // Left OPGA Volume
+    wm8994_write(codec, 0x0021, 0x0177);    // Right OPGA Volume
+    wm8994_write(codec, 0x001E, 0x0000);    // Lineout Volume
+    wm8994_write(codec, 0x0610, 0x01C0);    // DAC1 Left Volume
+    wm8994_write(codec, 0x0611, 0x01C0);    // DAC 1 Right Volume
+    wm8994_write(codec, 0x0402, 0x01C0);    // AIF1 DAC 1 Left Volume
+    wm8994_write(codec, 0x0403, 0x01C0);    // AIF1 DAC 1 Rigt Volume
+
+    /* Output Path Routing */
+    wm8994_write(codec, 0x002D, 0x0001);    // Output Mixer1
+    wm8994_write(codec, 0x002E, 0x0001);    // Output Mixer2
+    wm8994_write(codec, 0x0035, 0x0031);    // Line Mixer 2
+    wm8994_write(codec, 0x0005, 0x0303);    // Power Management5
+    wm8994_write(codec, 0x0601, 0x0001);    // DAC1 Left Mixer Routing
+    wm8994_write(codec, 0x0602, 0x0001);    // DAC1 Right Mixer Routing
+    wm8994_write(codec, 0x0208, 0x000A);    // Clocking 1
+    wm8994_write(codec, 0x0003, 0x0CF0);    // Power Management 3
+    wm8994_write(codec, 0x0420, 0x0000);    // DAC1 Filter
+
+    /* Channel Seperation */
+    wm8994_write(codec, 0x0037, 0x0000);    // Lineout Control
+    wm8994_write(codec, 0x0038, 0x0080);    // AntiPop1
+
 }
 
 void wm8994_set_playback_speaker(struct snd_soc_codec *codec)
