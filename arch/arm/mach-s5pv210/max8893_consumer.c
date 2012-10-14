@@ -41,6 +41,8 @@
 extern int hw_rev_adc;
 #endif
 
+int backlight_voltage;
+
 static int max8893_consumer_probe(struct platform_device *pdev)
 {
     int ret = 0;
@@ -89,12 +91,18 @@ static int max8893_consumer_suspend(struct platform_device *dev, pm_message_t st
 
 static int max8893_consumer_resume(struct platform_device *dev)
 {
-	int i, saved_control;
+	int i, saved_control, max8893_ldo2_voltage;
+
+	if (backlight_voltage > 0) {
+	    max8893_ldo2_voltage = backlight_voltage;
+	} else {
+	    max8893_ldo2_voltage = BACKLIGHT_VOLTAGE_MAX;
+	}
 
 	DBG("func =%s \n",__func__);	
 
   max8893_ldo_set_voltage_direct(MAX8893_LDO1,2900000,2900000);
-  max8893_ldo_set_voltage_direct(MAX8893_LDO2,3000000,3000000); //20100628_inchul(from HW)
+  max8893_ldo_set_voltage_direct(MAX8893_LDO2,max8893_ldo2_voltage,max8893_ldo2_voltage); //20100628_inchul(from HW)
   max8893_ldo_set_voltage_direct(MAX8893_LDO3,3000000,3000000);
   max8893_ldo_set_voltage_direct(MAX8893_LDO4,3000000,3000000);
   max8893_ldo_set_voltage_direct(MAX8893_LDO5,1800000,1800000);
