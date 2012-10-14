@@ -31,6 +31,7 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/max8893.h>
 #include <linux/regulator/consumer.h>
+#include <linux/input/cypress-touchkey.h>
 
 
 
@@ -89,12 +90,19 @@ static int max8893_consumer_suspend(struct platform_device *dev, pm_message_t st
 
 static int max8893_consumer_resume(struct platform_device *dev)
 {
-	int i, saved_control;
+	int i, saved_control, max8893_ldo2_voltage;
+	extern struct cypress_touchkey_devdata *devdata_led;
+
+	if (devdata_led->backlight_voltage > 0) {
+	    max8893_ldo2_voltage = devdata_led->backlight_voltage;
+	} else {
+	    max8893_ldo2_voltage = 3000000;
+	}
 
 	DBG("func =%s \n",__func__);	
 
   max8893_ldo_set_voltage_direct(MAX8893_LDO1,2900000,2900000);
-  max8893_ldo_set_voltage_direct(MAX8893_LDO2,3000000,3000000); //20100628_inchul(from HW)
+  max8893_ldo_set_voltage_direct(MAX8893_LDO2,max8893_ldo2_voltage,max8893_ldo2_voltage); //20100628_inchul(from HW)
   max8893_ldo_set_voltage_direct(MAX8893_LDO3,3000000,3000000);
   max8893_ldo_set_voltage_direct(MAX8893_LDO4,3000000,3000000);
   max8893_ldo_set_voltage_direct(MAX8893_LDO5,1800000,1800000);
