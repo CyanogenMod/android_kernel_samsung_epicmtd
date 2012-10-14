@@ -27,6 +27,7 @@
 #include <linux/input.h>
 #include <linux/earlysuspend.h>
 #include <linux/input/cypress-touchkey.h>
+#include <linux/regulator/max8893.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 
@@ -596,8 +597,73 @@ static ssize_t touchleds_disabled_store(struct device *dev,
 	return count;
 }
 
+static ssize_t touchleds_voltage_show(struct device *dev,
+                                       struct device_attribute *attr,
+                                       char *buf)
+{
+	int res;
+
+	mutex_lock(&devdata_led->mutex);
+	res = snprintf(buf, PAGE_SIZE, "%u\n",
+	               (unsigned int)backlight_voltage);
+	mutex_unlock(&devdata_led->mutex);
+
+	return res;
+}
+
+static ssize_t touchleds_voltage_store(struct device *dev,
+                                        struct device_attribute *attr,
+                                        const char *buf, size_t count)
+{
+	unsigned long val, previous_val;
+	int res;
+
+	if ((res = strict_strtoul(buf, 10, &val)) < 0)
+		return res;
+
+	if ((val > BACKLIGHT_VOLTAGE_MAX) || (val < BACKLIGHT_VOLTAGE_MIN))
+		return -EINVAL;
+
+	previous_val = backlight_voltage;
+
+	mutex_lock(&devdata_led->mutex);
+
+	backlight_voltage = val;
+
+	/* If we set a voltage higher than the current voltage,
+	 * the controller interprets it as a touch interrupt and
+	 * without a drop in voltage will not issue a touch release.
+	 * Disable the controller and re-enable after setting the
+	 * new voltage. */
+	if (val > previous_val) {
+		/* Initiate a mock suspend */
+		disable_irq_nosync(devdata_led->client->irq);
+		gpio_direction_output(_3_GPIO_TOUCH_EN, TOUCHKEY_OFF);
+		all_keys_up(devdata_led);
+#ifdef BACKLIGHT_DELAYS
+		cancel_delayed_work(&devdata_led->key_off_work);
+#endif
+
+		/* Set new TOUCHKEY voltage */
+		max8893_ldo_set_voltage_direct(MAX8893_LDO2, val, val);
+		msleep(1);
+
+		/* Re-enable the controller */
+		gpio_direction_output(_3_GPIO_TOUCH_EN, TOUCHKEY_ON);
+		enable_irq(devdata_led->client->irq);
+	} else {
+		max8893_ldo_set_voltage_direct(MAX8893_LDO2, val, val);
+	}
+
+	mutex_unlock(&devdata_led->mutex);
+
+	return count;
+}
+
 static DEVICE_ATTR(touchleds_disabled, S_IRUGO | S_IWUSR,
                    touchleds_disabled_show, touchleds_disabled_store);
+static DEVICE_ATTR(touchleds_voltage, S_IRUGO | S_IWUSR,
+                   touchleds_voltage_show, touchleds_voltage_store);
 
 extern struct class *sec_class;
 struct device *ts_key_dev;
@@ -716,6 +782,9 @@ static int cypress_touchkey_probe(struct i2c_client *client,
 	if (device_create_file(ts_key_dev, &dev_attr_touchleds_disabled) < 0)
 		pr_err("Unable to create \"%s\".\n", dev_attr_touchleds_disabled.attr.name);
 
+	if (device_create_file(ts_key_dev, &dev_attr_touchleds_voltage) < 0)
+		pr_err("Unable to create \"%s\".\n", dev_attr_touchleds_voltage.attr.name);
+
 #if 0
 	err = i2c_touchkey_write_byte(devdata, devdata->backlight_on);
 	if (err) {
@@ -754,6 +823,7 @@ err_read:
 	device_remove_file(ts_key_dev, &dev_attr_resume_delay);
 #endif
 	device_remove_file(ts_key_dev, &dev_attr_touchleds_disabled);
+	device_remove_file(ts_key_dev, &dev_attr_touchleds_voltage);
 	mutex_destroy(&devdata->mutex);
 	input_unregister_device(input_dev);
 	goto err_input_alloc_dev;
@@ -785,6 +855,7 @@ static int __devexit i2c_touchkey_remove(struct i2c_client *client)
 	cancel_delayed_work_sync(&devdata->key_off_work);
 #endif
 	device_remove_file(ts_key_dev, &dev_attr_touchleds_disabled);
+	device_remove_file(ts_key_dev, &dev_attr_touchleds_voltage);
 	mutex_destroy(&devdata->mutex);
 	input_unregister_device(devdata->input_dev);
 	kfree(devdata);
