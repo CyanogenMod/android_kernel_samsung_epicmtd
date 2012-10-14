@@ -21,6 +21,33 @@
 
 #define CYPRESS_TOUCHKEY_DEV_NAME "cypress_touchkey"
 
+#ifdef CONFIG_MACH_VICTORY
+#define BACKLIGHT_DELAYS 1
+#endif
+
+#include <linux/earlysuspend.h>
+
+struct cypress_touchkey_devdata {
+	struct i2c_client *client;
+	struct input_dev *input_dev;
+	struct touchkey_platform_data *pdata;
+	struct early_suspend early_suspend;
+	u8 backlight_on;
+	u8 backlight_off;
+	bool is_dead;
+	bool is_powering_on;
+	bool has_legacy_keycode;
+	bool is_delay_led_on;
+	bool is_backlight_on;
+	bool is_key_pressed;
+	bool is_bl_disabled;
+        int backlight_voltage;
+	struct mutex mutex;
+#ifdef BACKLIGHT_DELAYS
+	struct delayed_work key_off_work;
+#endif
+};
+
 struct touchkey_platform_data {
 	int keycode_cnt;
 	const int *keycode;
