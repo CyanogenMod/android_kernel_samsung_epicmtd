@@ -623,7 +623,6 @@ static void dpm_drv_timeout(unsigned long data)
  */
 void dpm_resume(pm_message_t state)
 {
-printk(KERN_INFO "XXXX Enter %s\n", __func__);
 	struct device *dev;
 	ktime_t starttime = ktime_get();
 
@@ -633,7 +632,6 @@ printk(KERN_INFO "XXXX Enter %s\n", __func__);
 	pm_transition = state;
 	async_error = 0;
 
-printk(KERN_INFO "XXXX %s: Before list_for_each_entry\n", __func__);
 	list_for_each_entry(dev, &dpm_suspended_list, power.entry) {
 		INIT_COMPLETION(dev->power.completion);
 		if (is_async(dev)) {
@@ -650,9 +648,7 @@ printk(KERN_INFO "XXXX %s: Before list_for_each_entry\n", __func__);
 
 			mutex_unlock(&dpm_list_mtx);
 
-//printk(KERN_INFO "XXXX %s: Attempt resume of device -> %s\n", __func__, dev_name(dev));
 			error = device_resume(dev, state, false);
-//printk(KERN_INFO "XXXX %s: Device %s resumed\n", __func__, dev_name(dev));
 			if (error)
 				pm_dev_err(dev, state, "", error);
 
@@ -665,7 +661,6 @@ printk(KERN_INFO "XXXX %s: Before list_for_each_entry\n", __func__);
 	mutex_unlock(&dpm_list_mtx);
 	async_synchronize_full();
 	dpm_show_time(starttime, state, NULL);
-printk(KERN_INFO "XXXX Exit %s\n", __func__);
 }
 
 /**
