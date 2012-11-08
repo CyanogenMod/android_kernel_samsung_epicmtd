@@ -21,6 +21,12 @@
 
 #include <linux/regulator/machine.h>
 
+/* Custom TOUCHKEY brightness control */
+#define TOUCHKEY_VOLTAGE_MAX  3000000
+#define TOUCHKEY_VOLTAGE_MIN  2200000
+
+extern int touchkey_voltage;
+
 enum {
 	MAX8893_BUCK,
 	MAX8893_LDO1,
