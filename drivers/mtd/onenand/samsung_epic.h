@@ -42,17 +42,17 @@ struct mtd_partition s3c_partition_info[] = {
 	{
 		.name		= "system",
 		.offset		= (132*SZ_256K),
-		.size		= (1374*SZ_256K), //1505
+		.size		= (1614*SZ_256K), //1745
 	},
 	{
 		.name		= "userdata",
-		.offset		= (1506*SZ_256K),
-		.size		= (2406*SZ_256K), //3911
+		.offset		= (1746*SZ_256K),
+		.size		= (2250*SZ_256K), //3995
 	},
 	{
 		.name		= "cache",
-		.offset		= (3912*SZ_256K),
-		.size		= (100*SZ_256K), //4011
+		.offset		= (3996*SZ_256K),
+		.size		= (16*SZ_256K), //4011
 	},
         { /* The reservoir area is used by Samsung's Block Management Layer (BML)
              to map good blocks from this reservoir to bad blocks in user
