@@ -621,6 +621,23 @@ static ssize_t touchleds_voltage_store(struct device *dev,
 	if ((res = strict_strtoul(buf, 10, &val)) < 0)
 		return res;
 
+        /* Values between 0-255 are most likely coming from liblights.
+         *   Convert the value based on a highly scientific scaling factor
+         *   to achieve the desired brightness levels.
+         */
+        if ((val > 0) || (val < 256)) {
+            if (val < 10)
+                val = 2300000;  // 0% brightness
+            else if (val < 100)
+                val = 2500000;  // 25%
+            else if (val < 150)
+                val = 2600000;  // 50%
+            else if (val < 220)
+                val = 2700000;  // 75%
+            else
+                val = 3000000;  // 100%
+        }
+
 	if ((val > TOUCHKEY_VOLTAGE_MAX) || (val < TOUCHKEY_VOLTAGE_MIN))
 		return -EINVAL;
 
